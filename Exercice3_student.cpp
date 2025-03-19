@@ -27,13 +27,17 @@ double tfin;         // Temps final
 unsigned int nsteps; // Nombre de pas de temps
 double ml;           // Masse de la Lune
 double mt;           // Masse de la Terre
-double dist;         // Distance Terre-Lune
+double ma; 			 // Masse du satellite 
+double dist;         // Distance Soleil_Jupyter
 double Om;           // Vitesse de rotation du repère
 double G_grav;       // Constante gravitationnelle
-double xt;           // Position de la Terre
-double xl;           // Position de la Lune
+double xt;           // Position du Soleil
+double xl;           // Position de Jupyter
 double dist_s_t;     // Distance satellite-Terre
 double dist_s_l;     // Distance satellite-Lune
+double n ; // ordre de convergeance 
+double jsteps ; 
+double f ; 
 
   valarray<double> y0 = std::valarray<double>(0.e0, 4); // Correctly initialized
   valarray<double> y  = std::valarray<double>(0.e0, 4); // Correctly initialized
@@ -48,11 +52,13 @@ double dist_s_l;     // Distance satellite-Lune
      inputs:
      write: (bool) ecriture de tous les sampling si faux
   */  
+  
+  
+  
+  
   void printOut(bool write)
   {
-  /** DONE : calculer l'energie mecanique **/
-    double Energy =  (y[0]*y[0]+y[1]+y[1])/2 + G_grav * mt / dist_s_t + G_grav * ml / dist_s_l - pow(Om,2) * ( pow(y[2],2) + pow(y[3],2) ) /2 ;
-    // cout << "Energy : " << Energy << endl ; 
+    double Energy =  (y[0]*y[0]+y[1]*y[1])/2 - G_grav * mt / dist_s_t + G_grav * ml / dist_s_l - pow(Om,2) * ( pow(y[2],2) + pow(y[3],2) )/2 ;
 
     // Ecriture tous les [sampling] pas de temps, sauf si write est vrai
     if((!write && last>=sampling) || (write && last!=1))
@@ -67,7 +73,7 @@ double dist_s_l;     // Distance satellite-Lune
     }
   }
 
-    void compute_f(valarray<double>& f) /**  DONE : Calcule le tableau de fonctions f(y) **/
+    void compute_f(valarray<double>& f) // Ne pas oublier de diviser par la masse de l'astéroide pour le cas sans jupyter 
     {
 	  dist_s_l = sqrt( ( y[2] - xl ) * ( y[2] - xl )  +  y[3]*y[3] );
       dist_s_t = sqrt( ( y[2] - xt ) * ( y[2] - xt )  +  y[3]*y[3] );
@@ -79,46 +85,21 @@ double dist_s_l;     // Distance satellite-Lune
       
     }
 
-    // New step method from EngineEuler
-    void step()
-    {
-      unsigned int iteration=0;
-      double error=999e0;
-      valarray<double> f =valarray<double>(0.e0,4); 
-      valarray<double> yold=valarray<double>(y);
-      valarray<double> y_control=valarray<double>(y);
-      valarray<double> delta_y_EE=valarray<double>(y);
+/********************************************** Runge Kutta ********************************************/ 
 
-      /** DONE : écrire un algorithme valide pour chaque alpha dans [0,1] **/
-      // tel que alpha=1 correspond à Euler explicite et alpha=0 à Euler implicite 
-      // et alpha=0.5 à Euler semi-implicite
-      if(alpha >= 0. && alpha <= 1.0){
-        t += dt;                 //mise à jour du temps 
-        
-        compute_f(f) ;
-        valarray<double> f0 = f ; 
-        delta_y_EE = alpha * f0 * dt ;
-        cout << y[0] << " " << y[1] << endl ; 
-        
-        while(error>tol && iteration<=maxit){
-			
-        	y = yold + delta_y_EE + (1 - alpha) * f * dt ;
-        	compute_f(f) ; 
-        	y_control = yold + delta_y_EE + (1 - alpha) * f * dt ; 
-        	error = ( abs(y - y_control) ).max(); // cette solution a été suggérée par un assistant 
-        	iteration += 1;
-        	
-	}	
-        if(iteration>=maxit){
-          cout << "WARNING: maximum number of iterations reached, error: " << error << endl;
-        }
-      }
-      else
-      {
-        cerr << "alpha not valid" << endl;
-      }
-      cout << iteration << endl;
-  
+
+
+	std::valarray<double> RK4_do_onestep(const std::valarray<double>& yold, double ti, double dt) 
+	{
+		std::valarray<double> k1, k2, k3, k4, ynew;
+		
+		k1 = dt * f(yold , ti) ; 
+		k2 = dt * f(yold + k1/2 , ti + dt/2) ; 
+		k3 = dt * f(yold + k2/2 , ti + dt/2) ; 
+		k4 = dt * f(yold + k3, ti + dt) ; 
+		
+		ynew = yold + ( k1 + 2*k2 + 2*k3 + k4 )/6;
+		return ynew;
     }
 
 public:
@@ -159,7 +140,7 @@ public:
       // Simulation complete
     void run()
     {
-      /** TODO : initialiser la position de la Terre et de la Lune, ainsi que la position de X' du satellite et Omega **/ 
+      /** TODO : Ajouter une def de eps , f = 0.999 , jsteps , n (ordre de convergence n = 4)**/ 
       
       xt = - dist * ml / (ml + mt) ;
       xl = dist * mt / ( mt + ml ) ; 
@@ -172,6 +153,39 @@ public:
       last = 0; // initialise le parametre d'ecriture
 
       printOut(true); // ecrire la condition initiale
+
+	  while ( t < tfin ) 
+	  {
+		  dt = min( dt , tfin-dt ) ; 
+		  jsteps += 1 ; 
+		  
+		  y1 = RK4_do_onestep(y,t,dt) ; 
+		  ytilde = RK4_do_onestep(y,t,dt/2) ; 
+		  y2 = RK4_do_onestep(ytilde,t,dt/2) ;
+		  
+		  d = (y2-y1).max() ; 
+		  
+		  if ( d <= eps ) 
+		  {
+			  y = y2 ; 
+			  t += dt ; 
+			  dt = dt * pow( e/d , 1/(n+1) ) ; 
+		  }
+		  else 
+		  {
+			  while( d > eps )
+			  {
+				  dt = f * dt * pow( e/d , 1/(n+1) ) ; 
+				  y1 = RK4_do_onestep(y,t,dt) ; 
+				  ytilde = RK4_do_onestep(y,t,dt/2) ; 
+				  y2 = RK4_do_onestep(ytilde,t,dt/2) ;
+			  }
+			  y = y2 ; 
+			  t += dt ; 
+		  }
+		   
+		  printOut(false);
+	  }	
 
       for(unsigned int i(0); i<nsteps; ++i) // boucle sur les pas de temps
       {
