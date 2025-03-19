@@ -38,6 +38,7 @@ double dist_s_l;     // Distance satellite-Lune
 double n ; // ordre de convergeance 
 double jsteps ; 
 double f ; 
+bool adaptative ; 
 
   valarray<double> y0 = std::valarray<double>(0.e0, 4); // Correctly initialized
   valarray<double> y  = std::valarray<double>(0.e0, 4); // Correctly initialized
@@ -52,9 +53,6 @@ double f ;
      inputs:
      write: (bool) ecriture de tous les sampling si faux
   */  
-  
-  
-  
   
   void printOut(bool write)
   {
@@ -82,7 +80,6 @@ double f ;
       f[1]      =  - G_grav * mt * y[3] / pow(dist_s_t,3) - G_grav * ml * y[3] / pow(dist_s_l,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
       f[2]      = y[0] ; 
       f[3]      = y[1] ; 
-      
     }
 
 /********************************************** Runge Kutta ********************************************/ 
@@ -107,6 +104,8 @@ public:
     Engine(ConfigFile configFile)
     {
       // Stockage des parametres de simulation dans les attributs de la classe
+      adaptative = configFile.get<double>("adaptative",adaptative);
+      f = configFile.get<double>("f",f);
       tfin     = configFile.get<double>("tfin",tfin);	        // lire le temps final de simulation
       nsteps   = configFile.get<unsigned int>("nsteps",nsteps); // lire le nombre de pas de temps
       y0[0]    = configFile.get<double>("vx0",y0[0]);  // vitesse initiale selon x	    
@@ -140,11 +139,13 @@ public:
       // Simulation complete
     void run()
     {
-      /** TODO : Ajouter une def de eps , f = 0.999 , jsteps , n (ordre de convergence n = 4)**/ 
+      /** TODO : Ajouter une def de eps , f = 0.999 , jsteps , n (ordre de convergence n = 4) , ajouter une condition dans le config pour avec pas de temps adaptatif et sans **/ 
       
       xt = - dist * ml / (ml + mt) ;
       xl = dist * mt / ( mt + ml ) ; 
       Om = sqrt( G_grav * ( mt + ml ) / pow(dist,3) ) ;
+      
+      jsteps = 0 ; 
 
       y0[2] = xl * ( ( 1 - ml/mt) / ( 1 + sqrt(ml/mt) ) ) ;
 
@@ -153,49 +154,59 @@ public:
       last = 0; // initialise le parametre d'ecriture
 
       printOut(true); // ecrire la condition initiale
-
-	  while ( t < tfin ) 
-	  {
-		  dt = min( dt , tfin-dt ) ; 
-		  jsteps += 1 ; 
+      
+      if ( adaptative == true ) // Si adaptative on fait avec la méthode de pas de temps adaptatif sinon sans (voir else)
+	  {	
 		  
-		  y1 = RK4_do_onestep(y,t,dt) ; 
-		  ytilde = RK4_do_onestep(y,t,dt/2) ; 
-		  y2 = RK4_do_onestep(ytilde,t,dt/2) ;
+/****************************************************** Partie Avec Temps Adaptatif	**************************************************/ 
+	  
+		while ( t < tfin ) 
+		{
+			dt = min( dt , tfin-dt ) ; 
+			jsteps += 1 ; 
 		  
-		  d = (y2-y1).max() ; 
+			y1 = RK4_do_onestep(y,t,dt) ; 
+			ytilde = RK4_do_onestep(y,t,dt/2) ; 
+			y2 = RK4_do_onestep(ytilde,t,dt/2) ;
 		  
-		  if ( d <= eps ) 
-		  {
-			  y = y2 ; 
-			  t += dt ; 
-			  dt = dt * pow( e/d , 1/(n+1) ) ; 
-		  }
-		  else 
-		  {
-			  while( d > eps )
-			  {
-				  dt = f * dt * pow( e/d , 1/(n+1) ) ; 
-				  y1 = RK4_do_onestep(y,t,dt) ; 
-				  ytilde = RK4_do_onestep(y,t,dt/2) ; 
-				  y2 = RK4_do_onestep(ytilde,t,dt/2) ;
-			  }
-			  y = y2 ; 
-			  t += dt ; 
-		  }
-		   
-		  printOut(false);
-	  }	
-
-      for(unsigned int i(0); i<nsteps; ++i) // boucle sur les pas de temps
-      {
-        step();  // faire un pas de temps
-        printOut(false); // ecrire le pas de temps actuel
+			d = (y2-y1).max() ; 
+		  
+			if ( d <= eps ) 
+			{
+				y = y2 ; 
+				t += dt ; 
+				dt = dt * pow( e/d , 1/(n+1) ) ; 
+			}
+			else 
+			{
+				while( d > eps )
+				{
+					dt = f * dt * pow( e/d , 1/(n+1) ) ; 
+					y1 = RK4_do_onestep(y,t,dt) ; 
+					ytilde = RK4_do_onestep(y,t,dt/2) ; 
+					y2 = RK4_do_onestep(ytilde,t,dt/2) ;
+				}
+				y = y2 ; 
+				t += dt ; 
+			}
+			printOut(false);
+		}
+		printOut(true);	
       }
-      printOut(true); // ecrire le dernier pas de temps
+      
+/**************************************************** Partie Sans dt Adaptatif *******************************************/      
 
+      else // sans les temps adaptatifs
+      {
+      for(unsigned int i(0); i<nsteps; ++i) // boucle sur les pas de temps
+		{
+			RK4_do_onestep(y,t,dt);  // faire un pas de temps
+			t += dt ; 
+			printOut(false); // ecrire le pas de temps actuel
+		}
+		printOut(true); // ecrire le dernier pas de temps
+	  }
     };
-   
 };
 
 // programme
