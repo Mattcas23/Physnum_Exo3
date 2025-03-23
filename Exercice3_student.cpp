@@ -71,20 +71,24 @@ bool adaptative ;
     }
   }
 
-    valarray<double> compute_f(valarray<double> const & y, double & t) // Ne pas oublier de diviser par la masse de l'astéroide pour le cas sans jupyter 
+    valarray<double> compute_f(valarray<double> const & y) // Ne pas oublier de diviser par la masse de l'astéroide pour le cas sans jupyter 
     { 
+		
 	  dist_s_l = sqrt( ( y[2] - xl ) * ( y[2] - xl )  +  y[3]*y[3] );
       dist_s_t = sqrt( ( y[2] - xt ) * ( y[2] - xt )  +  y[3]*y[3] );
       
-      valarray<double> f ; 
-      
+      valarray<double> f  = y ; 
+     
       f[0]      =  - G_grav * ms * (y[2] - xt) / pow(dist_s_t,3) + G_grav * mj * (xl - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
       f[1]      =  - G_grav * ms * y[3] / pow(dist_s_t,3) - G_grav * mj * y[3] / pow(dist_s_l,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
       f[2]      = y[0] ; 
       f[3]      = y[1] ; 
-      
+
       return f ; 
     }
+    
+	void print (valarray<double> const & k , short n )
+	{ cout << "k" << n << " : (" <<  k[0] << ',' << k[1] << ',' << k[2] << ',' << k[3] << ')' << endl ; }
 
 /********************************************** Runge Kutta ********************************************/ 
 
@@ -94,13 +98,18 @@ bool adaptative ;
 	{
 		std::valarray<double> k1, k2, k3, k4, ynew;
 		
-		double ti12 = ti + dt/2 ; 
-		double ti1  = ti + dt ; 
-		
-		k1 = dt * compute_f(yold , ti) ; 
-		k2 = dt * compute_f(yold + k1/2 , ti12) ; 
-		k3 = dt * compute_f(yold + k2/2 , ti12) ; 
-		k4 = dt * compute_f(yold + k3, ti1) ; 
+		// double ti12 = ti + dt/2 ; 
+		// double ti1  = ti + dt ; 
+			
+		k1 = dt * compute_f(yold) ; // compute_f(yold , ti) ; 
+		print(k1,1) ; 
+		cout << dt ; 
+		k2 = dt * compute_f(yold + k1/2) ; // compute_f(yold + k1/2 , ti12) ; 
+ 
+		k3 = dt * compute_f(yold + k2/2) ; // compute_f(yold + k2/2 , ti12) ; 
+
+		k4 = dt * compute_f(yold + k3) ; // compute_f(yold + k3, ti1) ; 
+
 		
 		ynew = yold + ( k1 + 2*k2 + 2*k3 + k4 )/6;
 		return ynew;
@@ -213,7 +222,7 @@ public:
       {
       for(unsigned int i(0); i<nsteps; ++i) // boucle sur les pas de temps
 		{
-			RK4_do_onestep(y,t,dt);  // faire un pas de temps
+			y = RK4_do_onestep(y,t,dt);  // faire un pas de temps
 			t += dt ; 
 			printOut(false); // ecrire le pas de temps actuel
 		}
