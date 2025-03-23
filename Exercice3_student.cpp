@@ -19,14 +19,14 @@ private:
 
 // EngineEuler specific members
   unsigned int maxit; // nombre maximale d iterations
-  double tol;         // tolerance methode iterative
+  double eps;         // tolerance methode iterative
   double alpha;       // parametre pour le scheme d'Euler
 
 // définition des variables
 double tfin;         // Temps final
 unsigned int nsteps; // Nombre de pas de temps
-double ml;           // Masse de la Lune
-double mt;           // Masse de la Terre
+double mj;           // Masse Jupyter
+double ms;           // Masse du Soleil
 double ma; 			 // Masse du satellite 
 double dist;         // Distance Soleil_Jupyter
 double Om;           // Vitesse de rotation du repère
@@ -56,7 +56,7 @@ bool adaptative ;
   
   void printOut(bool write)
   {
-    double Energy =  (y[0]*y[0]+y[1]*y[1])/2 - G_grav * mt / dist_s_t + G_grav * ml / dist_s_l - pow(Om,2) * ( pow(y[2],2) + pow(y[3],2) )/2 ;
+    double Energy =  ma*(y[0]*y[0]+y[1]*y[1])/2 - G_grav * ms / dist_s_t + G_grav * mj / dist_s_l - pow(Om,2) * ( pow(y[2],2) + pow(y[3],2) )/2 ;
 
     // Ecriture tous les [sampling] pas de temps, sauf si write est vrai
     if((!write && last>=sampling) || (write && last!=1))
@@ -71,15 +71,19 @@ bool adaptative ;
     }
   }
 
-    void compute_f(valarray<double>& f) // Ne pas oublier de diviser par la masse de l'astéroide pour le cas sans jupyter 
-    {
+    valarray<double> compute_f(valarray<double> const & y, double & t) // Ne pas oublier de diviser par la masse de l'astéroide pour le cas sans jupyter 
+    { 
 	  dist_s_l = sqrt( ( y[2] - xl ) * ( y[2] - xl )  +  y[3]*y[3] );
       dist_s_t = sqrt( ( y[2] - xt ) * ( y[2] - xt )  +  y[3]*y[3] );
       
-      f[0]      =  - G_grav * mt * (y[2] - xt) / pow(dist_s_t,3) + G_grav * ml * (xl - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
-      f[1]      =  - G_grav * mt * y[3] / pow(dist_s_t,3) - G_grav * ml * y[3] / pow(dist_s_l,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
+      valarray<double> f ; 
+      
+      f[0]      =  - G_grav * ms * (y[2] - xt) / pow(dist_s_t,3) + G_grav * mj * (xl - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
+      f[1]      =  - G_grav * ms * y[3] / pow(dist_s_t,3) - G_grav * mj * y[3] / pow(dist_s_l,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
       f[2]      = y[0] ; 
       f[3]      = y[1] ; 
+      
+      return f ; 
     }
 
 /********************************************** Runge Kutta ********************************************/ 
@@ -90,10 +94,13 @@ bool adaptative ;
 	{
 		std::valarray<double> k1, k2, k3, k4, ynew;
 		
-		k1 = dt * f(yold , ti) ; 
-		k2 = dt * f(yold + k1/2 , ti + dt/2) ; 
-		k3 = dt * f(yold + k2/2 , ti + dt/2) ; 
-		k4 = dt * f(yold + k3, ti + dt) ; 
+		double ti12 = ti + dt/2 ; 
+		double ti1  = ti + dt ; 
+		
+		k1 = dt * compute_f(yold , ti) ; 
+		k2 = dt * compute_f(yold + k1/2 , ti12) ; 
+		k3 = dt * compute_f(yold + k2/2 , ti12) ; 
+		k4 = dt * compute_f(yold + k3, ti1) ; 
 		
 		ynew = yold + ( k1 + 2*k2 + 2*k3 + k4 )/6;
 		return ynew;
@@ -113,11 +120,11 @@ public:
       y0[2]    = configFile.get<double>("x0",y0[2]);   // position initiale selon x       
       y0[3]    = configFile.get<double>("y0",y0[3]);   // position initiale selon y	    
       G_grav   = configFile.get<double>("G_grav",G_grav);           
-      ml       = configFile.get<double>("ml",ml);            
-      mt       = configFile.get<double>("mt",mt);        
+      mj       = configFile.get<double>("mj",mj);            
+      ms       = configFile.get<double>("ms",ms);        
       dist     = configFile.get<double>("dist",dist);        
       sampling = configFile.get<unsigned int>("sampling",sampling);
-      tol      = configFile.get<double>("tol", tol);
+      eps      = configFile.get<double>("eps", eps);
       maxit    = configFile.get<unsigned int>("maxit", maxit);
       alpha    = configFile.get<double>("alpha", alpha);
       /** DONE : calculer le time step **/
@@ -141,13 +148,13 @@ public:
     {
       /** TODO : Ajouter une def de eps , f = 0.999 , jsteps , n (ordre de convergence n = 4) , ajouter une condition dans le config pour avec pas de temps adaptatif et sans **/ 
       
-      xt = - dist * ml / (ml + mt) ;
-      xl = dist * mt / ( mt + ml ) ; 
-      Om = sqrt( G_grav * ( mt + ml ) / pow(dist,3) ) ;
+      xt = - dist * mj / (mj + ms) ;
+      xl = dist * ms / ( ms + mj ) ; 
+      Om = sqrt( G_grav * ( ms + mj ) / pow(dist,3) ) ;
       
       jsteps = 0 ; 
 
-      y0[2] = xl * ( ( 1 - ml/mt) / ( 1 + sqrt(ml/mt) ) ) ;
+      y0[2] = xl * ( ( 1 - mj/ms) / ( 1 + sqrt(mj/ms) ) ) ;
 
       t = 0.e0; // initialiser le temps
       y = y0;   // initialiser le position 
@@ -159,6 +166,11 @@ public:
 	  {	
 		  
 /****************************************************** Partie Avec Temps Adaptatif	**************************************************/ 
+
+		valarray<double> y1 ; 
+		valarray<double> ytilde ; 
+		valarray<double> y2 ; 
+		double d ; 
 	  
 		while ( t < tfin ) 
 		{
@@ -175,17 +187,18 @@ public:
 			{
 				y = y2 ; 
 				t += dt ; 
-				dt = dt * pow( e/d , 1/(n+1) ) ; 
+				dt = dt * pow( eps/d , 1/(n+1) ) ; 
 			}
 			else 
 			{
 				while( d > eps )
 				{
-					dt = f * dt * pow( e/d , 1/(n+1) ) ; 
+					dt = f * dt * pow( eps/d , 1/(n+1) ) ; 
 					y1 = RK4_do_onestep(y,t,dt) ; 
 					ytilde = RK4_do_onestep(y,t,dt/2) ; 
 					y2 = RK4_do_onestep(ytilde,t,dt/2) ;
 				}
+				
 				y = y2 ; 
 				t += dt ; 
 			}
