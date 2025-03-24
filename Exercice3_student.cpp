@@ -77,7 +77,7 @@ bool adaptative ;
 	  dist_s_l = sqrt( ( y[2] - xl ) * ( y[2] - xl )  +  y[3]*y[3] );
       dist_s_t = sqrt( ( y[2] - xt ) * ( y[2] - xt )  +  y[3]*y[3] );
       
-      valarray<double> f  = y ; 
+      valarray<double> f = y ; 
      
       f[0]      =  - G_grav * ms * (y[2] - xt) / pow(dist_s_t,3) + G_grav * mj * (xl - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
       f[1]      =  - G_grav * ms * y[3] / pow(dist_s_t,3) - G_grav * mj * y[3] / pow(dist_s_l,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
@@ -102,14 +102,13 @@ bool adaptative ;
 		// double ti1  = ti + dt ; 
 			
 		k1 = dt * compute_f(yold) ; // compute_f(yold , ti) ; 
-		print(k1,1) ; 
-		cout << dt ; 
+		// print(k1,1) ; 
 		k2 = dt * compute_f(yold + k1/2) ; // compute_f(yold + k1/2 , ti12) ; 
- 
+		// print(k2,2) ; 
 		k3 = dt * compute_f(yold + k2/2) ; // compute_f(yold + k2/2 , ti12) ; 
-
+		// print(k3,3) ; 
 		k4 = dt * compute_f(yold + k3) ; // compute_f(yold + k3, ti1) ; 
-
+		// print(k4,4) ; 
 		
 		ynew = yold + ( k1 + 2*k2 + 2*k3 + k4 )/6;
 		return ynew;
@@ -181,8 +180,11 @@ public:
 		valarray<double> y2 ; 
 		double d ; 
 	  
+		cout << "ADAPTATIF" << endl ; 
+		
 		while ( t < tfin ) 
 		{
+			cout << "t : " << t << endl ; 
 			dt = min( dt , tfin-dt ) ; 
 			jsteps += 1 ; 
 		  
@@ -190,7 +192,12 @@ public:
 			ytilde = RK4_do_onestep(y,t,dt/2) ; 
 			y2 = RK4_do_onestep(ytilde,t,dt/2) ;
 		  
+		  
+			print(y1,1) ; 
+			print(ytilde,3) ; 
+			print(y2,2) ; 
 			d = (y2-y1).max() ; 
+			cout << "d : " << d << endl ;  
 		  
 			if ( d <= eps ) 
 			{
@@ -206,11 +213,13 @@ public:
 					y1 = RK4_do_onestep(y,t,dt) ; 
 					ytilde = RK4_do_onestep(y,t,dt/2) ; 
 					y2 = RK4_do_onestep(ytilde,t,dt/2) ;
+					d = (y2-y1).max() ; 
 				}
 				
 				y = y2 ; 
 				t += dt ; 
 			}
+			cout << "dt : " << dt << endl ; 
 			printOut(false);
 		}
 		printOut(true);	
@@ -220,6 +229,8 @@ public:
 
       else // sans les temps adaptatifs
       {
+		  
+	  cout << "SANS TEMPS ADAPTATIF" << endl ; 	  
       for(unsigned int i(0); i<nsteps; ++i) // boucle sur les pas de temps
 		{
 			y = RK4_do_onestep(y,t,dt);  // faire un pas de temps
