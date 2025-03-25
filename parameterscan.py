@@ -148,10 +148,11 @@ def PosFin_Conv ( norder = 1 ) : # convergeance sur la postion finale ( en x )
 
 def dts () : # Pas de temps au cours du temps
 
-    plt.figure(t,data[:,7])
+    plt.figure()
+    plt.plot( t, data[:,-1] , color = 'black' , label = '$\\epsilon = $' + f'{eps}') # à modifier 
     plt.xlabel('t', fontsize=fs)
     plt.ylabel('Pas de temps $dt$', fontsize=fs)    
-    plt.plot()
+    plt.legend()
 
 def x() :
 
@@ -165,7 +166,7 @@ def x() :
 Trajectoire ()
 Energie ()
 PosFin_Conv ()
-#dts () 
+dts () 
 x() 
 
 plt.show()
