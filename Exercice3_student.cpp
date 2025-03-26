@@ -76,14 +76,14 @@ bool jupyter ;
     { 
 		
 	  if ( not jupyter ) 
-	  { mj = 0 ; Om = 0 ; }
-		
+	  { mj = 0 ; }
+
 	  dist_s_l = sqrt( ( y[2] - xl ) * ( y[2] - xl )  +  y[3]*y[3] );
       dist_s_t = sqrt( ( y[2] - xt ) * ( y[2] - xt )  +  y[3]*y[3] );
       
       valarray<double> f = y ; 
      
-      f[0]      =  - G_grav * ms * (y[2] - xt) / pow(dist_s_t,3) + G_grav * mj * (xl - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
+      f[0]      =  - G_grav * ms * (y[2] - xt) / pow(dist_s_t,3) + G_grav * mj  * (xl - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
       f[1]      =  - G_grav * ms * y[3] / pow(dist_s_t,3) - G_grav * mj * y[3] / pow(dist_s_l,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
       f[2]      = y[0] ; 
       f[3]      = y[1] ; 
@@ -142,6 +142,7 @@ public:
       jupyter  = configFile.get<double>("jupyter", jupyter);
       /** DONE : calculer le time step **/
       dt       = tfin / nsteps; 
+      ma = configFile.get<double>("ma", ma);
 
       
       // Ouverture du fichier de sortie
@@ -173,6 +174,7 @@ public:
 	  {
 		 xt = 0 ; 
 		 Om = 0 ;  
+		 cout << "Om = 0" << endl ; 
 	  }
       
       
