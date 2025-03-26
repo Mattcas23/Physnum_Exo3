@@ -36,18 +36,18 @@ y0 = Values[15,-1]
 #nsteps = Values[17,-1]
 f = Values[18,-1]
 adaptative = Values[19,-1]
+jupyter = Values[20,-1]
+ma = Values[21,-1]
 
 # ---------------------------------------------------------------
 
-nsteps = np.array([30e03]) # TODO change
+nsteps = np.array([30e02]) # TODO change
 neps = np.array([1e-1])
 # nsteps = np.array([ 20e3, 40e3, 50e3 , 60e3 , 80e3 , 200e3])
 # nsteps = np.array([4000,40000])
 #nsteps = np.array([200e3])
 # nsteps = np.array([4010, 4050])
 nsimul = len(nsteps)  # Number of simulations to perform
-
-tfin = 7776000  # Done : Verify that the value of tfin is EXACTLY the same as in the input file
 
 dt = tfin / nsteps
 
@@ -108,7 +108,7 @@ if adaptative :
         yy = data[-1, 4]
         En = data[-1, 5]
         convergence_list.append(xx)
-        print(data[:,3])
+        #print(data[:,3])
     # TODO compute the error for each simulation
     #error[i] = pow( (yref-yy)**2 + (xref-xx)**2 ,0.5)  
     #energy[i] = abs(Eref-En)
@@ -123,12 +123,15 @@ else :
         yy = data[-1, 4]
         En = data[-1, 5]
         convergence_list.append(xx)
-        print(data[:,3])    
+        #print(data[:,3])    
 
 lw = 1.5
 fs = 16
 
 # ---------------------------------------- Zones Plots ---------------------------------------- #
+
+print( f" max(vy) = {max(abs(data[:,2]))}" )
+print( f" min(vy) = {min(abs(data[:,2]))}" )
 
 def Trajectoire () :
 
@@ -175,12 +178,21 @@ def x() :
     ax.set_ylabel('x [m]', fontsize=fs)
     plt.legend()
 
+def vy () :
+
+    fig, ax = plt.subplots(constrained_layout=True)
+    ax.plot(t, data[:, 2], color = 'black' , label = '$n_{step} = $' + f"{nsteps[0]:.0f}")
+    ax.set_xlabel('t [s]', fontsize=fs)
+    ax.set_ylabel('vy [m]', fontsize=fs)
+    plt.legend()
+
 
 Trajectoire ()
 Energie ()
 PosFin_Conv ()
 dts () 
-x() 
+x()
+vy()
 
 plt.show()
 
