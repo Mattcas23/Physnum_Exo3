@@ -28,7 +28,7 @@ unsigned int nsteps; // Nombre de pas de temps
 double mj;           // Masse Jupyter
 double ms;           // Masse du Soleil
 double ma; 			 // Masse du satellite 
-double dist;         // Distance Soleil_Jupyter
+double a;         // Distance Soleil_Jupyter
 double Om;           // Vitesse de rotation du repère
 double G_grav;       // Constante gravitationnelle
 double xt;           // Position du Soleil
@@ -39,6 +39,7 @@ double n ; // ordre de convergeance
 double jsteps ; 
 double f ; 
 bool adaptative ; 
+bool jupyter ; 
 
   valarray<double> y0 = std::valarray<double>(0.e0, 4); // Correctly initialized
   valarray<double> y  = std::valarray<double>(0.e0, 4); // Correctly initialized
@@ -62,7 +63,7 @@ bool adaptative ;
     if((!write && last>=sampling) || (write && last!=1))
     {
       *outputFile << t << " " << y[0] << " " << y[1] << " " \
-      << y[2] << " " << y[3] << " " << Energy << " "<< endl; // write output on file
+      << y[2] << " " << y[3] << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
       last = 1;
     }
     else
@@ -73,6 +74,9 @@ bool adaptative ;
 
     valarray<double> compute_f(valarray<double> const & y) // Ne pas oublier de diviser par la masse de l'astéroide pour le cas sans jupyter 
     { 
+		
+	  if ( not jupyter ) 
+	  { mj = 0 ; Om = 0 ; }
 		
 	  dist_s_l = sqrt( ( y[2] - xl ) * ( y[2] - xl )  +  y[3]*y[3] );
       dist_s_t = sqrt( ( y[2] - xt ) * ( y[2] - xt )  +  y[3]*y[3] );
@@ -103,14 +107,14 @@ bool adaptative ;
 			
 		k1 = dt * compute_f(yold) ; // compute_f(yold , ti) ; 
 		// print(k1,1) ; 
-		k2 = dt * compute_f(yold + k1/2) ; // compute_f(yold + k1/2 , ti12) ; 
+		k2 = dt * compute_f(yold + k1/2.) ; // compute_f(yold + k1/2 , ti12) ; 
 		// print(k2,2) ; 
-		k3 = dt * compute_f(yold + k2/2) ; // compute_f(yold + k2/2 , ti12) ; 
+		k3 = dt * compute_f(yold + k2/2.) ; // compute_f(yold + k2/2 , ti12) ; 
 		// print(k3,3) ; 
 		k4 = dt * compute_f(yold + k3) ; // compute_f(yold + k3, ti1) ; 
 		// print(k4,4) ; 
 		
-		ynew = yold + ( k1 + 2*k2 + 2*k3 + k4 )/6;
+		ynew = yold + ( k1 + 2.*k2 + 2.*k3 + k4 )/6.;
 		return ynew;
     }
 
@@ -130,11 +134,12 @@ public:
       G_grav   = configFile.get<double>("G_grav",G_grav);           
       mj       = configFile.get<double>("mj",mj);            
       ms       = configFile.get<double>("ms",ms);        
-      dist     = configFile.get<double>("dist",dist);        
+      a     = configFile.get<double>("a",a);        
       sampling = configFile.get<unsigned int>("sampling",sampling);
       eps      = configFile.get<double>("eps", eps);
       maxit    = configFile.get<unsigned int>("maxit", maxit);
       alpha    = configFile.get<double>("alpha", alpha);
+      jupyter  = configFile.get<double>("jupyter", jupyter);
       /** DONE : calculer le time step **/
       dt       = tfin / nsteps; 
 
@@ -155,15 +160,28 @@ public:
     void run()
     {
       /** TODO : Ajouter une def de eps , f = 0.999 , jsteps , n (ordre de convergence n = 4) , ajouter une condition dans le config pour avec pas de temps adaptatif et sans **/ 
+      if ( jupyter )
+      {
+		xt = - a * mj / (mj + ms) ;
+		xl = a * ms / ( ms + mj ) ; 
+		Om = sqrt( G_grav * ( ms + mj ) / pow(a,3) ) ;
+		y0[0] = y0[0] * cos(Om * t); // vitesse initiale selon x 
+		y0[1] = y0[1] * sin(Om * t); // vitesse initiale selon y
+		// Modifier la formule pour la vitesse initiale
+      }
+      else 
+	  {
+		 xt = 0 ; 
+		 Om = 0 ;  
+	  }
       
-      xt = - dist * mj / (mj + ms) ;
-      xl = dist * ms / ( ms + mj ) ; 
-      Om = sqrt( G_grav * ( ms + mj ) / pow(dist,3) ) ;
       
       jsteps = 0 ; 
 
-      y0[2] = xl * ( ( 1 - mj/ms) / ( 1 + sqrt(mj/ms) ) ) ;
-
+      // y0[2] = xl * ( ( 1 - mj/ms) / ( 1 + sqrt(mj/ms) ) ) ;
+      y0[2] = 2*a ; 
+      print(y0,0) ; 
+      
       t = 0.e0; // initialiser le temps
       y = y0;   // initialiser le position 
       last = 0; // initialise le parametre d'ecriture
@@ -181,29 +199,40 @@ public:
 		double d ; 
 	  
 		cout << "ADAPTATIF" << endl ; 
+		cout << "eps : " << eps << endl ; 
 		
 		while ( t < tfin ) 
 		{
 			cout << "t : " << t << endl ; 
-			dt = min( dt , tfin-dt ) ; 
+			dt = min( dt , abs(tfin-dt) ) ; 
 			jsteps += 1 ; 
 		  
 			y1 = RK4_do_onestep(y,t,dt) ; 
-			ytilde = RK4_do_onestep(y,t,dt/2) ; 
-			y2 = RK4_do_onestep(ytilde,t,dt/2) ;
+			ytilde = RK4_do_onestep(y,t,dt/2.) ; 
+			y2 = RK4_do_onestep(ytilde,t,dt/2.) ; 
 		  
-		  
-			print(y1,1) ; 
-			print(ytilde,3) ; 
-			print(y2,2) ; 
-			d = (y2-y1).max() ; 
-			cout << "d : " << d << endl ;  
+			//print(y1,1) ; 
+			//print(ytilde,3) ; 
+			//print(y2,2) ; 
+			d = sqrt(pow((y2-y1),2).sum()) ; 
 		  
 			if ( d <= eps ) 
 			{
-				y = y2 ; 
-				t += dt ; 
-				dt = dt * pow( eps/d , 1/(n+1) ) ; 
+				
+				if (d == 0)
+				{
+					y = y2 ; 
+					t+=dt ; 
+					dt = 2.*dt; 
+					cerr << " d = 0 " << endl ; 
+				}
+				else
+				{
+					y = y2 ; 
+					t += dt ; 
+					dt = dt * pow( eps/d , 1/(n+1) ) ; 
+					//cout << "d_if : " << d << endl ; 
+				}
 			}
 			else 
 			{
@@ -211,15 +240,16 @@ public:
 				{
 					dt = f * dt * pow( eps/d , 1/(n+1) ) ; 
 					y1 = RK4_do_onestep(y,t,dt) ; 
-					ytilde = RK4_do_onestep(y,t,dt/2) ; 
-					y2 = RK4_do_onestep(ytilde,t,dt/2) ;
-					d = (y2-y1).max() ; 
+					ytilde = RK4_do_onestep(y,t,dt/2.) ; 
+					y2 = RK4_do_onestep(ytilde,t,dt/2.) ;
+					d = sqrt(pow((y2-y1),2).sum()) ; 
+					//cout << "d_else :  " << d << endl ; 
 				}
 				
 				y = y2 ; 
 				t += dt ; 
 			}
-			cout << "dt : " << dt << endl ; 
+			// cout << "dt : " << dt << endl ; 
 			printOut(false);
 		}
 		printOut(true);	
@@ -234,6 +264,7 @@ public:
       for(unsigned int i(0); i<nsteps; ++i) // boucle sur les pas de temps
 		{
 			y = RK4_do_onestep(y,t,dt);  // faire un pas de temps
+			print(y,1) ; 
 			t += dt ; 
 			printOut(false); // ecrire le pas de temps actuel
 		}
