@@ -40,7 +40,7 @@ adaptative = Values[19,-1]
 # ---------------------------------------------------------------
 
 nsteps = np.array([30e03]) # TODO change
-neps = np.array([0])
+neps = np.array([1e-1])
 # nsteps = np.array([ 20e3, 40e3, 50e3 , 60e3 , 80e3 , 200e3])
 # nsteps = np.array([4000,40000])
 #nsteps = np.array([200e3])
@@ -68,11 +68,11 @@ if adaptative : # Simulations avec pas de temps adaptatif
     
     outputs = []  # List to store output file names
     convergence_list = []
-    for i in range(nsimul):
+    for i in range(nsimul2):
         output_file = f"{paramstr2}={param2[i]}.out"
         outputs.append(output_file)
         cmd = f"{repertoire}{executable} {input_filename} {paramstr2}={param2[i]:.15g} output={output_file}"
-        cmd = f"{executable} {input_filename} {paramstr}={param2[i]:.15g} output={output_file}"
+        cmd = f"{executable} {input_filename} {paramstr2}={param2[i]:.15g} output={output_file}"
         print(cmd)
         subprocess.run(cmd, shell=True)
         print('Done.')
@@ -98,19 +98,32 @@ error = np.zeros(nsimul)
 #xref = dref[-1,3]
 #yref = dref[-1,4]
 #Eref = dref[-1,5]
-
-for i in range(nsimul):  # Iterate through the results of all simulations
-    data = np.loadtxt(outputs[i])  # Load the output file of the i-th simulation
-    t = data[:, 0]
-    vx = data[-1, 1]  # final position, velocity, energy
-    vy = data[-1, 2]
-    xx = data[-1, 3]
-    yy = data[-1, 4]
-    En = data[-1, 5]
-    convergence_list.append(xx)
+if adaptative : 
+    for i in range(nsimul):  # Iterate through the results of all simulations
+        data = np.loadtxt(outputs[i])  # Load the output file of the i-th simulation
+        t = data[:, 0]
+        vx = data[-1, 1]  # final position, velocity, energy
+        vy = data[-1, 2]
+        xx = data[-1, 3]
+        yy = data[-1, 4]
+        En = data[-1, 5]
+        convergence_list.append(xx)
+        print(data[:,3])
     # TODO compute the error for each simulation
     #error[i] = pow( (yref-yy)**2 + (xref-xx)**2 ,0.5)  
     #energy[i] = abs(Eref-En)
+else :
+
+    for i in range(nsimul):
+        data = np.loadtxt(outputs[i])  # Load the output file of the i-th simulation
+        t = data[:, 0]
+        vx = data[-1, 1]  # final position, velocity, energy
+        vy = data[-1, 2]
+        xx = data[-1, 3]
+        yy = data[-1, 4]
+        En = data[-1, 5]
+        convergence_list.append(xx)
+        print(data[:,3])    
 
 lw = 1.5
 fs = 16
