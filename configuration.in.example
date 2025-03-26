@@ -1,19 +1,22 @@
-tfin   = 259200 ! 
-nsteps = 4000
+tfin = 630720000
+ms = 1.98892e30
+mj = 5.9736e24
+rs = 6800e3
+rj = 1.5e9
 G_grav = 6.6743e-11
-mt     = 5.972e24
-ml     = 7.348e22
-rt     = 6378100 !metr
-rl     = 1737100 ! metr
-dist   = 385000000 ! metr 
-tol    = 1e-3
-alpha  = 0.5
-maxit  = 100
+a = 778.479e09
+eps = 1000
+alpha = 0.5
+maxit = 100
 output = output_SI.txt
 sampling = 1 
-vx0 = 0
-vy0 = 0
-x0 = 0
+vx0 = −11000
+vy0 = 2000
+x0 = 0 
 y0 = 0
-
-
+output = output.out
+nsteps = 3000 
+f = 0.999 
+adaptative = 1
+jupyter = 0 
+ma = 1 
