@@ -41,8 +41,8 @@ ma = Values[21,-1]
 
 # ---------------------------------------------------------------
 
-nsteps = np.array([30e02]) # TODO change
-neps = np.array([1e-1])
+nsteps = np.array([100e02]) # TODO change
+neps = np.array([1000])
 # nsteps = np.array([ 20e3, 40e3, 50e3 , 60e3 , 80e3 , 200e3])
 # nsteps = np.array([4000,40000])
 #nsteps = np.array([200e3])
@@ -132,12 +132,21 @@ fs = 16
 
 print( f" max(vy) = {max(abs(data[:,2]))}" )
 print( f" min(vy) = {min(abs(data[:,2]))}" )
+print( f" max(x) = {max((data[:,3])):.3e}" )
+print( f" min(x) = {min((data[:,3])):.3e}" )
 
 def Trajectoire () :
 
     plt.figure()
+    #plt.title()
     #Soleil = plt.Circle((38e7 * 5.972e24 / ( 5.972e24 + 7.348e22 ),0),1737100, color = 'yellow' , label = "Soleil")
-    #Jupyter = plt.Circle((-38e7 * 7.348e22 / ( 5.972e24 + 7.348e22 ),0),6378100 , color = 'brown' , label = "Jupyter")    
+    Jupyter = plt.scatter(a * ms / ( ms + mj ),0, color = 'brown' , label = "Jupyter")
+    Soleil  = plt.scatter(  - a * mj / (mj + ms) , 0 , marker = '*' , color = 'gold' , label = 'Soleil' )
+    #if ( jupyter ) :
+        #Jupyter = plt.scatter(0,0,marker = 'o' , color = 'brown') , label = "Jupyter"
+    posinit = plt.scatter(data[0,3],data[0,4], marker = 'o' , color = 'grey' , label = "astéroide")
+    #xmax = plt.scatter( max(data[:,3]),0, marker = '+' , color = 'red' , label = "$x_{max}$" + f"{max((data[:,3])):.2e}" )
+    #xmin = plt.scatter( min(data[:,3]),0, marker = '+' , color = 'red' , label = "$x_{min}$" + f"{min((data[:,3])):.2e}" )                     
     plt.plot(data[:, 3], data[:, 4], color = 'black' , label = '$n_{step} = $' + f"{nsteps[0]:.0f}")
     plt.xlabel('x [m]', fontsize=fs)
     plt.ylabel('y [m]', fontsize=fs)
@@ -150,6 +159,8 @@ def Energie () : # Energie en fonction du temps
     plt.xlabel('t [s]', fontsize=fs)
     plt.ylabel('$E_{mec}$', fontsize=fs)
     plt.legend()
+
+    
 
 def PosFin_Conv ( norder = 1 ) : # convergeance sur la postion finale ( en x )
 
@@ -195,20 +206,6 @@ x()
 vy()
 
 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
