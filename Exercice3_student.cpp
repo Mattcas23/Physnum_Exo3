@@ -31,8 +31,8 @@ double ma; 			 // Masse du satellite
 double a;         // Distance Soleil_Jupyter
 double Om;           // Vitesse de rotation du repère
 double G_grav;       // Constante gravitationnelle
-double xt;           // Position du Soleil
-double xl;           // Position de Jupyter
+double xs;           // Position du Soleil
+double xj;           // Position de Jupyter
 double dist_s_t;     // Distance satellite-Terre
 double dist_s_l;     // Distance satellite-Lune
 double n ; // ordre de convergeance 
@@ -65,6 +65,10 @@ bool jupyter ;
       *outputFile << t << " " << y[0] << " " << y[1] << " " \
       << y[2] << " " << y[3] << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
       last = 1;
+      
+      //*outputFile << t << " " << y[0] << " " << y[1] << " " \
+      //<< y[2]*cos(Om*t) + y[3]*sin(Om*t) << " " << - y[2]*sin(Om*t) + y[3]*cos(Om*t) << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
+      //last = 1;
     }
     else
     {
@@ -78,12 +82,12 @@ bool jupyter ;
 	  if ( not jupyter ) 
 	  { mj = 0 ; }
 
-	  dist_s_l = sqrt( ( y[2] - xl ) * ( y[2] - xl )  +  y[3]*y[3] );
-      dist_s_t = sqrt( ( y[2] - xt ) * ( y[2] - xt )  +  y[3]*y[3] );
+	  dist_s_l = sqrt( ( y[2] - xj ) * ( y[2] - xj )  +  y[3]*y[3] );
+      dist_s_t = sqrt( ( y[2] - xs ) * ( y[2] - xs )  +  y[3]*y[3] );
       
       valarray<double> f = y ; 
      
-      f[0]      =  - G_grav * ms * (y[2] - xt) / pow(dist_s_t,3) + G_grav * mj  * (xl - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
+      f[0]      =  - G_grav * ms * (y[2] - xs) / pow(dist_s_t,3) + G_grav * mj  * (xj - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
       f[1]      =  - G_grav * ms * y[3] / pow(dist_s_t,3) - G_grav * mj * y[3] / pow(dist_s_l,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
       f[2]      = y[0] ; 
       f[3]      = y[1] ; 
@@ -163,26 +167,28 @@ public:
       /** TODO : Ajouter une def de eps , f = 0.999 , jsteps , n (ordre de convergence n = 4) , ajouter une condition dans le config pour avec pas de temps adaptatif et sans **/ 
       if ( jupyter )
       {
-		xt = - a * mj / (mj + ms) ;
-		xl = a * ms / ( ms + mj ) ; 
+		xs = - a * mj / (mj + ms) ; // xt = soleil 
+		xj = a * ms / ( ms + mj ) ; 
 		Om = sqrt( G_grav * ( ms + mj ) / pow(a,3) ) ;
-		y0[0] = y0[0] * cos(Om * t); // vitesse initiale selon x 
-		y0[1] = y0[1] * sin(Om * t); // vitesse initiale selon y
+		y0[2] = 2.*a + xs ; // position initiale en x
+		y0[1] = y0[1] + y0[2]*Om; // vitesse initiale selon y 
+		// y0[0] = y0[0] * sin(Om * t); // vitesse initiale selon x
 		// Modifier la formule pour la vitesse initiale
+		cout << "Jupyter" << endl ; 
       }
       else 
 	  {
-		 xt = 0 ; 
+		 xs = 0 ; 
 		 Om = 0 ;  
+		 y0[2] = 2.*a ; 
 		 cout << "Om = 0" << endl ; 
 	  }
       
       
       jsteps = 0 ; 
 
-      // y0[2] = xl * ( ( 1 - mj/ms) / ( 1 + sqrt(mj/ms) ) ) ;
-      y0[2] = 2*a ; 
-      print(y0,0) ; 
+      // y0[2] = xj * ( ( 1 - mj/ms) / ( 1 + sqrt(mj/ms) ) ) ;
+      //print(y0,0) ; 
       
       t = 0.e0; // initialiser le temps
       y = y0;   // initialiser le position 
@@ -205,7 +211,7 @@ public:
 		
 		while ( t < tfin ) 
 		{
-			cout << "t : " << t << endl ; 
+			// cout << "t : " << t << endl ; 
 			dt = min( dt , abs(tfin-dt) ) ; 
 			jsteps += 1 ; 
 		  
@@ -226,7 +232,7 @@ public:
 					y = y2 ; 
 					t+=dt ; 
 					dt = 2.*dt; 
-					cerr << " d = 0 " << endl ; 
+					// cerr << " d = 0 " << endl ; 
 				}
 				else
 				{
@@ -266,7 +272,7 @@ public:
       for(unsigned int i(0); i<nsteps; ++i) // boucle sur les pas de temps
 		{
 			y = RK4_do_onestep(y,t,dt);  // faire un pas de temps
-			print(y,1) ; 
+			//print(y,1) ; 
 			t += dt ; 
 			printOut(false); // ecrire le pas de temps actuel
 		}
