@@ -33,8 +33,8 @@ double Om;           // Vitesse de rotation du repère
 double G_grav;       // Constante gravitationnelle
 double xs;           // Position du Soleil
 double xj;           // Position de Jupyter
-double dist_s_t;     // Distance satellite-Terre
-double dist_s_l;     // Distance satellite-Lune
+double dist_a_s;     // Distance asteroide Soleil
+double dist_a_j;     // Distance asteroide Jupyter 
 double n ; // ordre de convergeance 
 double jsteps ; 
 double f ; 
@@ -57,7 +57,7 @@ bool jupyter ;
   
   void printOut(bool write)
   {
-    double Energy =  ma*(y[0]*y[0]+y[1]*y[1])/2 - G_grav * ms / dist_s_t + G_grav * mj / dist_s_l - pow(Om,2) * ( pow(y[2],2) + pow(y[3],2) )/2 ;
+    double Energy =  ma*(y[0]*y[0]+y[1]*y[1])/2 - G_grav * ms / dist_a_s + G_grav * mj / dist_a_j - pow(Om,2) * ( pow(y[2],2) + pow(y[3],2) )/2 ;
 
     // Ecriture tous les [sampling] pas de temps, sauf si write est vrai
     if((!write && last>=sampling) || (write && last!=1))
@@ -78,17 +78,14 @@ bool jupyter ;
 
     valarray<double> compute_f(valarray<double> const & y) // Ne pas oublier de diviser par la masse de l'astéroide pour le cas sans jupyter 
     { 
-		
-	  if ( not jupyter ) 
-	  { mj = 0 ; }
 
-	  dist_s_l = sqrt( ( y[2] - xj ) * ( y[2] - xj )  +  y[3]*y[3] );
-      dist_s_t = sqrt( ( y[2] - xs ) * ( y[2] - xs )  +  y[3]*y[3] );
+	  dist_a_j = sqrt( ( y[2] - xj ) * ( y[2] - xj )  +  y[3]*y[3] );
+      dist_a_s = sqrt( ( y[2] - xs ) * ( y[2] - xs )  +  y[3]*y[3] );
       
       valarray<double> f = y ; 
-     
-      f[0]      =  - G_grav * ms * (y[2] - xs) / pow(dist_s_t,3) + G_grav * mj  * (xj - y[2]) / pow(dist_s_l,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
-      f[1]      =  - G_grav * ms * y[3] / pow(dist_s_t,3) - G_grav * mj * y[3] / pow(dist_s_l,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
+      
+      f[0]      =  - G_grav * ms * (y[2] - xs) / pow(dist_a_s,3) + G_grav * mj  * (xj - y[2]) / pow(dist_a_j,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
+      f[1]      =  - G_grav * ms * y[3] / pow(dist_a_s,3) - G_grav * mj * y[3] / pow(dist_a_j,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
       f[2]      = y[0] ; 
       f[3]      = y[1] ; 
 
@@ -106,17 +103,10 @@ bool jupyter ;
 	{
 		std::valarray<double> k1, k2, k3, k4, ynew;
 		
-		// double ti12 = ti + dt/2 ; 
-		// double ti1  = ti + dt ; 
-			
 		k1 = dt * compute_f(yold) ; // compute_f(yold , ti) ; 
-		// print(k1,1) ; 
 		k2 = dt * compute_f(yold + k1/2.) ; // compute_f(yold + k1/2 , ti12) ; 
-		// print(k2,2) ; 
 		k3 = dt * compute_f(yold + k2/2.) ; // compute_f(yold + k2/2 , ti12) ; 
-		// print(k3,3) ; 
 		k4 = dt * compute_f(yold + k3) ; // compute_f(yold + k3, ti1) ; 
-		// print(k4,4) ; 
 		
 		ynew = yold + ( k1 + 2.*k2 + 2.*k3 + k4 )/6.;
 		return ynew;
@@ -171,7 +161,7 @@ public:
 		xj = a * ms / ( ms + mj ) ; 
 		Om = sqrt( G_grav * ( ms + mj ) / pow(a,3) ) ;
 		y0[2] = 2.*a + xs ; // position initiale en x
-		y0[1] = y0[1] + y0[2]*Om; // vitesse initiale selon y 
+		y0[1] = y0[1] - y0[2]*Om; // vitesse initiale selon y 
 		// y0[0] = y0[0] * sin(Om * t); // vitesse initiale selon x
 		// Modifier la formule pour la vitesse initiale
 		cout << "Jupyter" << endl ; 
@@ -181,7 +171,10 @@ public:
 		 xs = 0 ; 
 		 Om = 0 ;  
 		 y0[2] = 2.*a ; 
-		 cout << "Om = 0" << endl ; 
+		 mj = 0 ; 
+		 cout << "Sans Jupyter" << endl ; 
+		 cout << "Om = " << Om << endl ; 
+		 cout << "mj = " << mj << endl ; 
 	  }
       
       
