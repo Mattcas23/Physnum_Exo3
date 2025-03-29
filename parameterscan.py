@@ -41,13 +41,11 @@ ma = Values[21,-1]
 
 # ---------------------------------------------------------------
 
-nsteps = np.array([25 , 30 , 35 , 40 , 50 , 60 ])*1e3 # TODO change
-eps = np.array([1000,5000,10000])
-# nsteps = np.array([ 20e3, 40e3, 50e3 , 60e3 , 80e3 , 200e3])
-# nsteps = np.array([4000,40000])
-#nsteps = np.array([200e3])
-# nsteps = np.array([4010, 4050])
-nsimul = len(nsteps)  # Number of simulations to perform
+nsteps = np.array([25 , 30 , 35 , 40 , 50 , 60 ])*1e3
+
+eps = np.array([1000,5000,10000,20000])
+
+nsimul = len(nsteps)  # Number of simulations to perform ( pour un nombre de pas changeant )
 
 dt = tfin / nsteps
 
@@ -92,7 +90,7 @@ else : # Simulations avec pas de temps fixe
         subprocess.run(cmd, shell=True)
         print('Done.')    
 
-error = np.zeros(nsimul)
+Eerr = np.array([]) # erreur sur l'énergie mécanique
 
 jsteps_list = np.zeros(len(eps))
 
@@ -109,7 +107,8 @@ if adaptative : # schéma à pas de temps adaptatif
         jsteps = data[-1,6] # nombre de pas de temps total pour la simulation 
         
         convergence_list.append(xx)
-        jsteps_list[i] = jsteps 
+        jsteps_list[i] = jsteps
+        Eerr = np.append( Eerr , abs(data[1,5] - data[-1,5]) ) # erreur sur l'Emec : différence entre la valeur initiale et la valeur finale 
 
 else : # schéma à pas de temps fixe 
 
@@ -121,7 +120,9 @@ else : # schéma à pas de temps fixe
         xx = data[-1, 3]
         yy = data[-1, 4]
         En = data[-1, 5]
-        convergence_list.append(xx)  
+        
+        convergence_list.append(xx)
+        Eerr = np.append( Eerr , abs(data[1,5] - data[-1,5]) ) # erreur sur l'Emec : différence entre la valeur initiale et la valeur finale
 
 lw = 1.5
 fs = 16
@@ -140,14 +141,14 @@ def Trajectoire () :
     plt.figure()
     #plt.title()
     #Soleil = plt.Circle((38e7 * 5.972e24 / ( 5.972e24 + 7.348e22 ),0),1737100, color = 'yellow' , label = "Soleil")
-    Jupyter = plt.scatter(a * ms / ( ms + mj ),0, color = 'brown' , label = "Jupyter")
+    #Jupyter = plt.scatter(a * ms / ( ms + mj ),0, color = 'brown' , label = "Jupyter")
     Soleil  = plt.scatter(  - a * mj / (mj + ms) , 0 , marker = '*' , color = 'gold' , label = 'Soleil' )
     #if ( jupyter ) :
         #Jupyter = plt.scatter(0,0,marker = 'o' , color = 'brown') , label = "Jupyter"
-    posinit = plt.scatter(data[0,3],data[0,4], marker = 'o' , color = 'grey' , label = "astéroide")
+    #posinit = plt.scatter(data[0,3],data[0,4], marker = 'o' , color = 'grey' , label = "astéroide")
     #xmax = plt.scatter( max(data[:,3]),0, marker = '+' , color = 'red' , label = "$x_{max}$" + f"{max((data[:,3])):.2e}" )
     #xmin = plt.scatter( min(data[:,3]),0, marker = '+' , color = 'red' , label = "$x_{min}$" + f"{min((data[:,3])):.2e}" )                     
-    plt.plot(data[:, 3], data[:, 4], color = 'black' , label = '$n_{step} = $' + f"{nsteps[0]:.0f}")
+    plt.plot(data[:, 3], data[:, 4], color = 'black' , label = '$n_{step} = $' + f"{nsteps[-1]:.0f}")
     plt.xlabel('x [m]', fontsize=fs)
     plt.ylabel('y [m]', fontsize=fs)
     plt.legend()
@@ -155,26 +156,45 @@ def Trajectoire () :
 def Energie () : # Energie en fonction du temps 
 
     plt.figure()
-    plt.plot(data[:, 0], data[:, 5], color = 'black' , label = '$n_{step} = $' + f"{nsteps[0]:.0f}")
+    plt.plot(data[:, 0], data[:, 5], color = 'black' , label = '$n_{step} = $' + f"{nsteps[-1]:.0f}")
     plt.xlabel('t [s]', fontsize=fs)
     plt.ylabel('$E_{mec}$', fontsize=fs)
     plt.legend()
 
+def Emec_Err ( norder = 5 ) : # Erreur de l'Emec en fonction du temps ( fixe : ordre 5 ; adaptatif : ordre ? )
+
+    if adaptative : # Erreur avec pas de temps adaptatif
+
+        plt.figure()
+        plt.loglog( jsteps_list , Eerr,'k+-',linewidth = lw)
+        plt.loglog( jsteps_list , (1/pow(jsteps_list,norder))*1e14 , color  = 'red' , label = f"$N^{norder}$" , linestyle = 'dashed')
+        plt.xlabel("$j_{steps}$ [s]", fontsize=fs)
+        plt.ylabel('$\\delta_{E_{mec}}$', fontsize=fs)
+        plt.legend(fontsize = fs - 3)
+        plt.plot()
+
+    else : # Erreur avec pas de temps fixe  
+        
+        plt.figure()
+        plt.loglog( dt,Eerr,'k+-',linewidth = lw)
+        plt.loglog( dt , pow(dt,norder)/1e20 , color  = 'red' , label = f"$1/N^{norder}$" , linestyle = 'dashed')
+        plt.xlabel(f"$\\Delta t$ [s]", fontsize=fs)
+        plt.ylabel('$\\delta_{E_{mec}}$', fontsize=fs)
+        plt.legend(fontsize = fs - 3)
+        plt.plot()
+
 def PosFin_Conv ( norder = 4 ) : # convergeance sur la postion finale ( en x )
 
 
-    if adaptative : # convergeance en fonction de jsteps ( Runge Kutta adaptatif )
-
+    if adaptative : # convergeance en fonction de jsteps ( Runge Kutta adaptatif : ordre ? )
         
-        print(jsteps)
-        print(convergence_list)
         plt.figure()
         plt.plot(jsteps_list**norder, convergence_list , 'k+-' , linewidth = lw)
         plt.xlabel(f"$(jsteps)^{norder}$ [s]", fontsize=fs)
         plt.ylabel('$x_{final}$', fontsize=fs)
         plt.plot()
 
-    else : # convergeance en fonction de dt ( Runge Kutta fixe )
+    else : # convergeance en fonction de dt ( Runge Kutta fixe : ordre 4)
 
         plt.figure()
         plt.plot(dt**norder, convergence_list, 'k+-', linewidth=lw)
@@ -216,5 +236,6 @@ PosFin_Conv ()
 dts () 
 x()
 vy()
+Emec_Err ()
 
 plt.show()
