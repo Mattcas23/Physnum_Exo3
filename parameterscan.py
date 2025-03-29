@@ -43,7 +43,7 @@ ma = Values[21,-1]
 
 nsteps = np.array([25 , 30 , 35 , 40 , 50 , 60 ])*1e3
 
-eps = np.array([1000,5000,10000,20000])
+eps = np.array([1000,5000,10000])
 
 nsimul = len(nsteps)  # Number of simulations to perform ( pour un nombre de pas changeant )
 
@@ -183,10 +183,10 @@ def Emec_Err ( norder = 5 ) : # Erreur de l'Emec en fonction du temps ( fixe : 
         plt.legend(fontsize = fs - 3)
         plt.plot()
 
-def PosFin_Conv ( norder = 4 ) : # convergeance sur la postion finale ( en x )
+def PosFin_Conv ( norder = 1 ) : # convergeance sur la postion finale ( en x )
 
 
-    if adaptative : # convergeance en fonction de jsteps ( Runge Kutta adaptatif : ordre ? )
+    if adaptative : # convergeance en fonction de jsteps ( Runge Kutta adaptatif : ordre 1 ? )
         
         plt.figure()
         plt.plot(jsteps_list**norder, convergence_list , 'k+-' , linewidth = lw)
