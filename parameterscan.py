@@ -23,7 +23,7 @@ rs= Values[3,-1]
 rj= Values[4,-1]
 G_grav = Values[5,-1]
 a   =  Values[6,-1]
-eps    = Values[7,-1]
+#eps    = Values[7,-1]
 alpha  = Values[8,-1]
 maxit  = Values[9,-1]
 output = Values[10,-1]
@@ -41,8 +41,8 @@ ma = Values[21,-1]
 
 # ---------------------------------------------------------------
 
-nsteps = np.array([100e02]) # TODO change
-neps = np.array([1000])
+nsteps = np.array([25 , 30 , 35 , 40 , 50 , 60 ])*1e3 # TODO change
+eps = np.array([1000,5000,10000])
 # nsteps = np.array([ 20e3, 40e3, 50e3 , 60e3 , 80e3 , 200e3])
 # nsteps = np.array([4000,40000])
 #nsteps = np.array([200e3])
@@ -56,9 +56,9 @@ energy = np.zeros(nsimul) # added
 paramstr = 'nsteps'  # Parameter name to scan
 param = nsteps  # Parameter values to scan
 
-paramstr2 = 'neps'
-param2 = neps
-nsimul2 = len(neps)
+paramstr2 = 'eps'
+param2 = eps
+nsimul2 = len(eps)
 
 # ------------------------------------------- Simulations --------------------------------------------- #
 
@@ -94,12 +94,11 @@ else : # Simulations avec pas de temps fixe
 
 error = np.zeros(nsimul)
 
-#dref  = np.loadtxt(outputs[-1])
-#xref = dref[-1,3]
-#yref = dref[-1,4]
-#Eref = dref[-1,5]
-if adaptative : 
-    for i in range(nsimul):  # Iterate through the results of all simulations
+jsteps_list = np.zeros(len(eps))
+
+if adaptative : # schéma à pas de temps adaptatif 
+    
+    for i in range(nsimul2):  # Iterate through the results of all simulations
         data = np.loadtxt(outputs[i])  # Load the output file of the i-th simulation
         t = data[:, 0]
         vx = data[-1, 1]  # final position, velocity, energy
@@ -107,12 +106,12 @@ if adaptative :
         xx = data[-1, 3]
         yy = data[-1, 4]
         En = data[-1, 5]
+        jsteps = data[-1,6] # nombre de pas de temps total pour la simulation 
+        
         convergence_list.append(xx)
-        #print(data[:,3])
-    # TODO compute the error for each simulation
-    #error[i] = pow( (yref-yy)**2 + (xref-xx)**2 ,0.5)  
-    #energy[i] = abs(Eref-En)
-else :
+        jsteps_list[i] = jsteps 
+
+else : # schéma à pas de temps fixe 
 
     for i in range(nsimul):
         data = np.loadtxt(outputs[i])  # Load the output file of the i-th simulation
@@ -122,16 +121,17 @@ else :
         xx = data[-1, 3]
         yy = data[-1, 4]
         En = data[-1, 5]
-        convergence_list.append(xx)
-        #print(data[:,3])    
+        convergence_list.append(xx)  
 
 lw = 1.5
 fs = 16
 
 # ---------------------------------------- Zones Plots ---------------------------------------- #
 
+# Vitesse max et min en y 
 print( f" max(vy) = {max(abs(data[:,2]))}" )
 print( f" min(vy) = {min(abs(data[:,2]))}" )
+# Position max et min en x
 print( f" max(x) = {max((data[:,3])):.3e}" )
 print( f" min(x) = {min((data[:,3])):.3e}" )
 
@@ -160,18 +160,30 @@ def Energie () : # Energie en fonction du temps
     plt.ylabel('$E_{mec}$', fontsize=fs)
     plt.legend()
 
-    
+def PosFin_Conv ( norder = 4 ) : # convergeance sur la postion finale ( en x )
 
-def PosFin_Conv ( norder = 1 ) : # convergeance sur la postion finale ( en x )
 
-    plt.figure()
-    plt.plot(dt**norder, convergence_list, 'k+-', linewidth=lw)
-    plt.ticklabel_format(axis='y', style='scientific', scilimits = (-4,-4))
-    plt.xlabel(f"$(\\Delta t)^{norder}$ [s]", fontsize=fs)
-    plt.ylabel('$x_{final}$', fontsize=fs)
-    plt.xticks(fontsize=fs)
-    plt.yticks(fontsize=fs)
-    plt.grid(True)
+    if adaptative : # convergeance en fonction de jsteps ( Runge Kutta adaptatif )
+
+        
+        print(jsteps)
+        print(convergence_list)
+        plt.figure()
+        plt.plot(jsteps_list**norder, convergence_list , 'k+-' , linewidth = lw)
+        plt.xlabel(f"$(jsteps)^{norder}$ [s]", fontsize=fs)
+        plt.ylabel('$x_{final}$', fontsize=fs)
+        plt.plot()
+
+    else : # convergeance en fonction de dt ( Runge Kutta fixe )
+
+        plt.figure()
+        plt.plot(dt**norder, convergence_list, 'k+-', linewidth=lw)
+        plt.xlabel(f"$(\\Delta t)^{norder}$ [s]", fontsize=fs)
+        plt.ylabel('$x_{final}$', fontsize=fs)
+        plt.xticks(fontsize=fs)
+        plt.yticks(fontsize=fs)
+        plt.grid(True)
+        plt.plot()
 
 def dts () : # Pas de temps au cours du temps
 
@@ -206,57 +218,3 @@ x()
 vy()
 
 plt.show()
-
-
-
-
-
-
-def energies (nord = 1) : 
-
-    plt.figure()
-    plt.loglog(dt[:-1],energy[:-1], 'r+-' , linewidth = lw)
-    plt.xlabel(f"$\\Delta t $ [s]", fontsize = fs)
-    plt.ylabel('error $E_{mec}$', fontsize=fs)
-    plt.loglog(dt*nord, pow(dt,nord), color = 'black' ,linewidth = lw , label = f"$1/N^{nord}$" , linestyle = 'dashed')
-    #plt.ticklabel_format(axis='y', style='scientific', scilimits = (5,5))
-    plt.xticks(fontsize=fs)
-    plt.yticks(fontsize=fs)
-    plt.grid(True)
-    plt.legend()
-
-#energies() 
-
-# uncomment the following if you want debug
-#import pdb
-#pbd.set_trace()
-
-def pos_error (n) : 
-    plt.figure()
-    plt.loglog(dt[:-1], error[:-1], 'r+-', linewidth=lw)
-    plt.loglog(dt, pow(dt,n), color = 'black' ,linewidth = lw , label = f"$1/N^{n}$" , linestyle = 'dashed')
-    plt.xlabel('$\\Delta t$ [s]', fontsize=fs)
-    plt.ylabel('final position error [m]', fontsize=fs)
-    plt.xticks(fontsize=fs)
-    plt.yticks(fontsize=fs)
-    plt.grid(True)
-    plt.legend()
-
-#pos_error (1)
-
-"""
-Si on n'a pas la solution analytique: on représente la quantite voulue
-(ci-dessous v_y, modifier selon vos besoins)
-en fonction de (Delta t)^norder, ou norder est un entier.
-"""
-norder = 1 # Modify if needed = 1 (original)
-
-plt.figure()
-plt.plot(dt**norder, convergence_list, 'k+-', linewidth=lw)
-plt.xlabel(f"$(\\Delta t)^{norder}$ [s]", fontsize=fs)
-plt.ylabel('$x$ [m]', fontsize=fs)
-plt.xticks(fontsize=fs)
-plt.yticks(fontsize=fs)
-plt.grid(True)
-
-#plt.show()
