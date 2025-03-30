@@ -40,6 +40,7 @@ double jsteps ;
 double f ; 
 bool adaptative ; 
 bool jupyter ; 
+bool Rg ; // 
 
   valarray<double> y0 = std::valarray<double>(0.e0, 4); // Correctly initialized
   valarray<double> y  = std::valarray<double>(0.e0, 4); // Correctly initialized
@@ -62,13 +63,18 @@ bool jupyter ;
     // Ecriture tous les [sampling] pas de temps, sauf si write est vrai
     if((!write && last>=sampling) || (write && last!=1))
     {
-      //*outputFile << t << " " << y[0] << " " << y[1] << " " \
-      //<< y[2] << " " << y[3] << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
-      //last = 1;
-      
-      *outputFile << t << " " << y[0] << " " << y[1] << " " \
-      << y[2]*cos(Om*t) - y[3]*sin(Om*t) << " " << y[2]*sin(Om*t) + y[3]*cos(Om*t) << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
-      last = 1;
+		if ( jupyter and Rg ) // si jupyter et si on veut écrire dans le fichier ( Rg = 1 => ref non-tournant)
+		{
+			*outputFile << t << " " << y[0] << " " << y[1] << " " \
+			<< y[2]*cos(Om*t) - y[3]*sin(Om*t) << " " << y[2]*sin(Om*t) + y[3]*cos(Om*t) << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
+			last = 1;
+		}
+		else // si sans jupyter ou si on veut le référentiel R tournant (Rg = 0)
+		{
+			*outputFile << t << " " << y[0] << " " << y[1] << " " \
+			<< y[2] << " " << y[3] << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
+			last = 1;
+		}
     }
     else
     {
@@ -137,6 +143,7 @@ public:
       /** DONE : calculer le time step **/
       dt       = tfin / nsteps; 
       ma = configFile.get<double>("ma", ma);
+      Rg = configFile.get<double>("Rg", Rg); // 1 = dans le ref du centre de masse  ; 0 dans le ref R 
 
       
       // Ouverture du fichier de sortie
