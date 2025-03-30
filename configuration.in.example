@@ -20,3 +20,4 @@ f = 0.99
 adaptative = 0
 jupyter = 1
 ma = 1 
+Rg = 0
