@@ -154,8 +154,8 @@ def Trajectoire () :
         
     else : # On affiche la position minimale et maximale en x 
     
-        xmax = plt.scatter( max(data[:,3]),0, marker = '+' , color = 'red' , label = "$x_{max}$" + f"{max((data[:,3])):.2e}" )
-        xmin = plt.scatter( min(data[:,3]),0, marker = '^' , color = 'red' , label = "$x_{min}$" + f"{min((data[:,3])):.2e}" )
+        xmax = plt.scatter( max(data[:,3]),-1.51e12, marker = '+' , color = 'red' , label = "$x_{max} =$" + f"{max((data[:,3])):.2e}" )
+        xmin = plt.scatter( min(data[:,3]),0, marker = '^' , color = 'red' , label = "$x_{min} =$" + f"{min((data[:,3])):.2e}" )
         
     #posinit = plt.scatter(data[0,3],data[0,4], marker = 'o' , color = 'grey' , label = "astéroide")
     plt.plot(data[:, 3], data[:, 4], color = 'black' , label = '$n_{step} = $' + f"{nsteps[-1]:.0f}")
