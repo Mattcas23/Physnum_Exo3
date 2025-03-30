@@ -155,6 +155,10 @@ def Trajectoire () :
 
     if jupyter : # On affiche Jupyter
         
+        referentiel = "$R'$"
+        if Rg :
+            referentiel = "$R_G$"
+        plt.title(f"Référentiel {referentiel}",fontsize = fs - 2)
         Jupyter = plt.scatter( a * ms / ( ms + mj ) ,0,marker = 'o' , color = 'brown' , label = "Jupyter" )
         
     else : # On affiche la position minimale et maximale en x 
