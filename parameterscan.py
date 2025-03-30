@@ -43,7 +43,7 @@ ma = Values[21,-1]
 
 nsteps = np.array([25 , 30 , 35 , 40 , 50 , 60 ])*1e3
 
-eps = np.array([1000,5000,10000])
+eps = np.array([100, 200,500, 700, 1000])
 
 nsimul = len(nsteps)  # Number of simulations to perform ( pour un nombre de pas changeant )
 
@@ -58,7 +58,14 @@ paramstr2 = 'eps'
 param2 = eps
 nsimul2 = len(eps)
 
-# ------------------------------------------- Simulations --------------------------------------------- #
+# ------------------------------------------- Simulations ---------------------------------------------
+
+if jupyter :
+    print("Avec Jupyter")
+else :
+    print("Sans Jupyter")
+
+    
 
 if adaptative : # Simulations avec pas de temps adaptatif
 
@@ -168,7 +175,7 @@ def Emec_Err ( norder = 5 ) : # Erreur de l'Emec en fonction du temps ( fixe : 
         plt.figure()
         plt.loglog( jsteps_list , Eerr,'k+-',linewidth = lw)
         plt.loglog( jsteps_list , (1/pow(jsteps_list,norder))*1e14 , color  = 'red' , label = f"$N^{norder}$" , linestyle = 'dashed')
-        plt.xlabel("$j_{steps}$ [s]", fontsize=fs)
+        plt.xlabel("$j_{steps}$", fontsize=fs)
         plt.ylabel('$\\delta_{E_{mec}}$', fontsize=fs)
         plt.legend(fontsize = fs - 3)
         plt.plot()
@@ -183,14 +190,14 @@ def Emec_Err ( norder = 5 ) : # Erreur de l'Emec en fonction du temps ( fixe : 
         plt.legend(fontsize = fs - 3)
         plt.plot()
 
-def PosFin_Conv ( norder = 1 ) : # convergeance sur la postion finale ( en x )
+def PosFin_Conv ( norder = 4 ) : # convergeance sur la postion finale ( en x )
 
 
     if adaptative : # convergeance en fonction de jsteps ( Runge Kutta adaptatif : ordre 1 ? )
         
         plt.figure()
         plt.plot(jsteps_list**norder, convergence_list , 'k+-' , linewidth = lw)
-        plt.xlabel(f"$(jsteps)^{norder}$ [s]", fontsize=fs)
+        plt.xlabel(f"$(jsteps)^{norder}$", fontsize=fs)
         plt.ylabel('$x_{final}$', fontsize=fs)
         plt.plot()
 
@@ -205,13 +212,22 @@ def PosFin_Conv ( norder = 1 ) : # convergeance sur la postion finale ( en x )
         plt.grid(True)
         plt.plot()
 
-def dts () : # Pas de temps au cours du temps
+def dts ( jstep = False ) : # Pas de temps au cours du temps et jsteps au cours du temps si True
 
     plt.figure()
-    plt.plot( t, data[:,-1] , color = 'black' , label = '$\\epsilon = $' + f'{eps}') # à modifier 
-    plt.xlabel('t', fontsize=fs)
-    plt.ylabel('Pas de temps $dt$', fontsize=fs)    
+    plt.plot( t, data[:,-1] , color = 'black' , label = '$\\epsilon = $' + f'{eps[-1]}') # à modifier 
+    plt.xlabel('t' [s], fontsize=fs)
+    plt.ylabel('$dt$'[s], fontsize=fs)    
     plt.legend()
+
+    if jstep :
+
+        plt.figure()
+        plt.plot(t,data[:,6], color = 'black' , label = '$\\epsilon = $' + f'{eps[-1]}' )
+        plt.xlabel('t' [s], fontsize=fs)
+        plt.ylabel('$j_{steps}$', fontsize=fs)    
+        plt.legend()
+    
 
 def x() :
 
@@ -226,16 +242,16 @@ def vy () :
     fig, ax = plt.subplots(constrained_layout=True)
     ax.plot(t, data[:, 2], color = 'black' , label = '$n_{step} = $' + f"{nsteps[0]:.0f}")
     ax.set_xlabel('t [s]', fontsize=fs)
-    ax.set_ylabel('vy [m]', fontsize=fs)
+    ax.set_ylabel('vy [ms$^{-1}$]', fontsize=fs)
     plt.legend()
 
 
 Trajectoire ()
 Energie ()
 PosFin_Conv ()
-dts () 
-x()
-vy()
-Emec_Err ()
+dts (True) 
+#x()
+#vy()
+#Emec_Err ()
 
 plt.show()
