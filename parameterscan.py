@@ -38,12 +38,13 @@ f = Values[18,-1]
 adaptative = Values[19,-1]
 jupyter = Values[20,-1]
 ma = Values[21,-1]
+Rg = Values[22,-1]
 
 # ---------------------------------------------------------------
 
 nsteps = np.array([25 , 30 , 35 , 40 , 50 , 60 ])*1e3
 
-eps = np.array([100, 200,500, 700, 1000])
+eps = np.array( [1000 , 3000 ,  5000 , 10000 , 20000])
 
 nsimul = len(nsteps)  # Number of simulations to perform ( pour un nombre de pas changeant )
 
@@ -62,6 +63,10 @@ nsimul2 = len(eps)
 
 if jupyter :
     print("Avec Jupyter")
+    if Rg :
+        print("Référentiel RG")
+    else : 
+        print("Référentiel R'")
 else :
     print("Sans Jupyter")
 
@@ -69,7 +74,7 @@ else :
 
 if adaptative : # Simulations avec pas de temps adaptatif
 
-    print("Adaptatif")
+    print("Pas de temps adaptatif")
     
     outputs = []  # List to store output file names
     convergence_list = []
@@ -84,7 +89,7 @@ if adaptative : # Simulations avec pas de temps adaptatif
 
 else : # Simulations avec pas de temps fixe
 
-    print("Fixe")
+    print("Pas de temps fixe")
 
     outputs = []  # List to store output file names
     convergence_list = []
@@ -150,7 +155,7 @@ def Trajectoire () :
 
     if jupyter : # On affiche Jupyter
         
-        Jupyter = plt.scatter(0,0,marker = 'o' , color = 'brown' , label = "Jupyter" )
+        Jupyter = plt.scatter( a * ms / ( ms + mj ) ,0,marker = 'o' , color = 'brown' , label = "Jupyter" )
         
     else : # On affiche la position minimale et maximale en x 
     
@@ -171,7 +176,7 @@ def Energie () : # Energie en fonction du temps
     plt.ylabel('$E_{mec}$', fontsize=fs)
     plt.legend()
 
-def Emec_Err ( norder = 5 ) : # Erreur de l'Emec en fonction du temps ( fixe : ordre 5 ; adaptatif : ordre ? )
+def Emec_Err ( norder = 5 ) : # Erreur de l'Emec en fonction du temps ( fixe et sans jupyter : ordre 5 ; adaptatif : ordre ? )
 
     if adaptative : # Erreur avec pas de temps adaptatif
 
@@ -215,7 +220,7 @@ def PosFin_Conv ( norder = 4 ) : # convergeance sur la postion finale ( en x )
         plt.grid(True)
         plt.plot()
 
-def dts ( jstep = False ) : # Pas de temps au cours du temps et jsteps au cours du temps si True
+def dts ( jstep ) : # Pas de temps au cours du temps et jsteps au cours du temps si adaptatif et jstep
 
     plt.figure()
     plt.plot( t, data[:,-1] , color = 'black' , label = '$\\epsilon = $' + f'{eps[-1]}') # à modifier 
@@ -223,7 +228,7 @@ def dts ( jstep = False ) : # Pas de temps au cours du temps et jsteps au cours 
     plt.ylabel('$dt$ [s]', fontsize=fs)    
     plt.legend()
 
-    if jstep :
+    if adaptative and jstep :
 
         plt.figure()
         plt.plot(t,data[:,6], color = 'black' , label = '$\\epsilon = $' + f'{eps[-1]}' )
@@ -255,6 +260,6 @@ PosFin_Conv ()
 dts (True) 
 #x()
 #vy()
-#Emec_Err ()
+Emec_Err ()
 
 plt.show()
