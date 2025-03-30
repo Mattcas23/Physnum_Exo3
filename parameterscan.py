@@ -146,15 +146,18 @@ print( f" min(x) = {min((data[:,3])):.3e}" )
 def Trajectoire () :
 
     plt.figure()
-    #plt.title()
-    #Soleil = plt.Circle((38e7 * 5.972e24 / ( 5.972e24 + 7.348e22 ),0),1737100, color = 'yellow' , label = "Soleil")
-    #Jupyter = plt.scatter(a * ms / ( ms + mj ),0, color = 'brown' , label = "Jupyter")
     Soleil  = plt.scatter(  - a * mj / (mj + ms) , 0 , marker = '*' , color = 'gold' , label = 'Soleil' )
-    #if ( jupyter ) :
-        #Jupyter = plt.scatter(0,0,marker = 'o' , color = 'brown') , label = "Jupyter"
+
+    if jupyter : # On affiche Jupyter
+        
+        Jupyter = plt.scatter(0,0,marker = 'o' , color = 'brown' , label = "Jupyter" )
+        
+    else : # On affiche la position minimale et maximale en x 
+    
+        xmax = plt.scatter( max(data[:,3]),0, marker = '+' , color = 'red' , label = "$x_{max}$" + f"{max((data[:,3])):.2e}" )
+        xmin = plt.scatter( min(data[:,3]),0, marker = '^' , color = 'red' , label = "$x_{min}$" + f"{min((data[:,3])):.2e}" )
+        
     #posinit = plt.scatter(data[0,3],data[0,4], marker = 'o' , color = 'grey' , label = "astéroide")
-    #xmax = plt.scatter( max(data[:,3]),0, marker = '+' , color = 'red' , label = "$x_{max}$" + f"{max((data[:,3])):.2e}" )
-    #xmin = plt.scatter( min(data[:,3]),0, marker = '+' , color = 'red' , label = "$x_{min}$" + f"{min((data[:,3])):.2e}" )                     
     plt.plot(data[:, 3], data[:, 4], color = 'black' , label = '$n_{step} = $' + f"{nsteps[-1]:.0f}")
     plt.xlabel('x [m]', fontsize=fs)
     plt.ylabel('y [m]', fontsize=fs)
@@ -216,15 +219,15 @@ def dts ( jstep = False ) : # Pas de temps au cours du temps et jsteps au cours 
 
     plt.figure()
     plt.plot( t, data[:,-1] , color = 'black' , label = '$\\epsilon = $' + f'{eps[-1]}') # à modifier 
-    plt.xlabel('t' [s], fontsize=fs)
-    plt.ylabel('$dt$'[s], fontsize=fs)    
+    plt.xlabel('t [s] ', fontsize=fs)
+    plt.ylabel('$dt$ [s]', fontsize=fs)    
     plt.legend()
 
     if jstep :
 
         plt.figure()
         plt.plot(t,data[:,6], color = 'black' , label = '$\\epsilon = $' + f'{eps[-1]}' )
-        plt.xlabel('t' [s], fontsize=fs)
+        plt.xlabel('t [s]', fontsize=fs)
         plt.ylabel('$j_{steps}$', fontsize=fs)    
         plt.legend()
     
