@@ -62,13 +62,13 @@ bool jupyter ;
     // Ecriture tous les [sampling] pas de temps, sauf si write est vrai
     if((!write && last>=sampling) || (write && last!=1))
     {
-      *outputFile << t << " " << y[0] << " " << y[1] << " " \
-      << y[2] << " " << y[3] << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
-      last = 1;
-      
       //*outputFile << t << " " << y[0] << " " << y[1] << " " \
-      //<< y[2]*cos(Om*t) + y[3]*sin(Om*t) << " " << - y[2]*sin(Om*t) + y[3]*cos(Om*t) << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
+      //<< y[2] << " " << y[3] << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
       //last = 1;
+      
+      *outputFile << t << " " << y[0] << " " << y[1] << " " \
+      << y[2]*cos(Om*t) - y[3]*sin(Om*t) << " " << y[2]*sin(Om*t) + y[3]*cos(Om*t) << " " << Energy << " " << jsteps << " " << dt  << endl; // write output on file
+      last = 1;
     }
     else
     {
