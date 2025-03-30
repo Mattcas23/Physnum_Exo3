@@ -76,15 +76,15 @@ bool jupyter ;
     }
   }
 
-    valarray<double> compute_f(valarray<double> const & y) // Ne pas oublier de diviser par la masse de l'astéroide pour le cas sans jupyter 
+    valarray<double> compute_f(valarray<double> const & y) 
     { 
 
-	  dist_a_j = sqrt( ( y[2] - xj ) * ( y[2] - xj )  +  y[3]*y[3] );
-      dist_a_s = sqrt( ( y[2] - xs ) * ( y[2] - xs )  +  y[3]*y[3] );
+	  dist_a_j = sqrt( ( y[2] - xj ) * ( y[2] - xj )  +  y[3]*y[3] ); // distance asteroide jupyter
+      dist_a_s = sqrt( ( y[2] - xs ) * ( y[2] - xs )  +  y[3]*y[3] ); // distance asteroide soleil 
       
       valarray<double> f = y ; 
       
-      f[0]      =  - G_grav * ms * (y[2] - xs) / pow(dist_a_s,3) + G_grav * mj  * (xj - y[2]) / pow(dist_a_j,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
+      f[0]      =  G_grav * ms * (xs - y[2]) / pow(dist_a_s,3) + G_grav * mj  * (xj - y[2]) / pow(dist_a_j,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
       f[1]      =  - G_grav * ms * y[3] / pow(dist_a_s,3) - G_grav * mj * y[3] / pow(dist_a_j,3) - 2*Om*y[0] + pow(Om,2)*y[3] ; 
       f[2]      = y[0] ; 
       f[3]      = y[1] ; 
@@ -157,13 +157,12 @@ public:
       /** TODO : Ajouter une def de eps , f = 0.999 , jsteps , n (ordre de convergence n = 4) , ajouter une condition dans le config pour avec pas de temps adaptatif et sans **/ 
       if ( jupyter )
       {
-		xs = - a * mj / (mj + ms) ; // xt = soleil 
-		xj = a * ms / ( ms + mj ) ; 
+		xs = - a * mj / (mj + ms) ; // position du soleil 
+		xj = a * ms / ( ms + mj ) ; // position de Jupyter 
 		Om = sqrt( G_grav * ( ms + mj ) / pow(a,3) ) ;
 		y0[2] = 2.*a + xs ; // position initiale en x
 		y0[1] = y0[1] - y0[2]*Om; // vitesse initiale selon y 
 		// y0[0] = y0[0] * sin(Om * t); // vitesse initiale selon x
-		// Modifier la formule pour la vitesse initiale
 		cout << "Jupyter" << endl ; 
       }
       else 
@@ -172,16 +171,12 @@ public:
 		 Om = 0 ;  
 		 y0[2] = 2.*a ; 
 		 mj = 0 ; 
-		 cout << "Sans Jupyter" << endl ; 
-		 cout << "Om = " << Om << endl ; 
-		 cout << "mj = " << mj << endl ; 
+		 cout << "Sans Jupyter : " ; 
+		 cout << "Om = " << Om ; 
+		 cout << " et mj = " << mj << endl ; 
 	  }
       
-      
       jsteps = 0 ; 
-
-      // y0[2] = xj * ( ( 1 - mj/ms) / ( 1 + sqrt(mj/ms) ) ) ;
-      //print(y0,0) ; 
       
       t = 0.e0; // initialiser le temps
       y = y0;   // initialiser le position 
@@ -194,6 +189,8 @@ public:
 		  
 /****************************************************** Partie Avec Temps Adaptatif	**************************************************/ 
 
+		n = 4 ;  // Ordre de convergeance de Runge Kutta
+
 		valarray<double> y1 ; 
 		valarray<double> ytilde ; 
 		valarray<double> y2 ; 
@@ -203,28 +200,22 @@ public:
 		cout << "eps : " << eps << endl ; 
 		
 		while ( t < tfin ) 
-		{
-			// cout << "t : " << t << endl ; 
-			dt = min( dt , abs(tfin-dt) ) ; 
+		{	
+			dt = min( dt , abs(tfin-t) ) ; 
 			jsteps += 1 ; 
 		  
 			y1 = RK4_do_onestep(y,t,dt) ; 
 			ytilde = RK4_do_onestep(y,t,dt/2.) ; 
 			y2 = RK4_do_onestep(ytilde,t,dt/2.) ; 
 		  
-			//print(y1,1) ; 
-			//print(ytilde,3) ; 
-			//print(y2,2) ; 
-			d = sqrt(pow((y2-y1),2).sum()) ; 
+			d = (abs(y2-y1)).max() ; //sqrt(pow((y2-y1),2).sum()) ; 
 		  
 			if ( d <= eps ) 
 			{
-				
 				if (d == 0)
 				{
 					y = y2 ; 
 					t+=dt ; 
-					dt = 2.*dt; 
 					// cerr << " d = 0 " << endl ; 
 				}
 				else
@@ -240,10 +231,12 @@ public:
 				while( d > eps )
 				{
 					dt = f * dt * pow( eps/d , 1/(n+1) ) ; 
+					
 					y1 = RK4_do_onestep(y,t,dt) ; 
 					ytilde = RK4_do_onestep(y,t,dt/2.) ; 
 					y2 = RK4_do_onestep(ytilde,t,dt/2.) ;
-					d = sqrt(pow((y2-y1),2).sum()) ; 
+					
+					d = (abs(y2-y1)).max() ; // sqrt(pow((y2-y1),2).sum()) ; 
 					//cout << "d_else :  " << d << endl ; 
 				}
 				
@@ -265,7 +258,6 @@ public:
       for(unsigned int i(0); i<nsteps; ++i) // boucle sur les pas de temps
 		{
 			y = RK4_do_onestep(y,t,dt);  // faire un pas de temps
-			//print(y,1) ; 
 			t += dt ; 
 			printOut(false); // ecrire le pas de temps actuel
 		}
