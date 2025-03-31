@@ -42,9 +42,13 @@ Rg = Values[22,-1]
 
 # ---------------------------------------------------------------
 
-nsteps = np.array([25 , 30 , 35 , 40 , 50 , 60 ])*1e3
+nsteps = np.array([25 , 30 , 35 , 40 , 50 , 60 ])*1e3 # valeurs utilisées pour la convergeance 
 
-eps = np.array( [1000 , 3000 ,  5000 , 10000 , 20000])
+#nsteps = np.array([10000])
+
+eps = np.array( [ 5120 , 1280 , 80 , 20 ])
+
+#eps = np.array([1000])
 
 nsimul = len(nsteps)  # Number of simulations to perform ( pour un nombre de pas changeant )
 
@@ -70,14 +74,13 @@ if jupyter :
 else :
     print("Sans Jupyter")
 
-    
 
 if adaptative : # Simulations avec pas de temps adaptatif
 
     print("Pas de temps adaptatif")
     
     outputs = []  # List to store output file names
-    convergence_list = []
+    convergence_list = np.array([])
     for i in range(nsimul2):
         output_file = f"{paramstr2}={param2[i]}.out"
         outputs.append(output_file)
@@ -106,6 +109,8 @@ Eerr = np.array([]) # erreur sur l'énergie mécanique
 
 jsteps_list = np.zeros(len(eps))
 
+conv_list_y = []
+
 if adaptative : # schéma à pas de temps adaptatif 
     
     for i in range(nsimul2):  # Iterate through the results of all simulations
@@ -117,8 +122,9 @@ if adaptative : # schéma à pas de temps adaptatif
         yy = data[-1, 4]
         En = data[-1, 5]
         jsteps = data[-1,6] # nombre de pas de temps total pour la simulation 
-        
-        convergence_list.append(xx)
+
+        conv_list_y.append(yy)
+        convergence_list = np.append(convergence_list,xx)
         jsteps_list[i] = jsteps
         Eerr = np.append( Eerr , abs(data[1,5] - data[-1,5]) ) # erreur sur l'Emec : différence entre la valeur initiale et la valeur finale 
 
@@ -132,7 +138,8 @@ else : # schéma à pas de temps fixe
         xx = data[-1, 3]
         yy = data[-1, 4]
         En = data[-1, 5]
-        
+
+        conv_list_y.append(yy)
         convergence_list.append(xx)
         Eerr = np.append( Eerr , abs(data[1,5] - data[-1,5]) ) # erreur sur l'Emec : différence entre la valeur initiale et la valeur finale
 
@@ -141,16 +148,30 @@ fs = 16
 
 # ---------------------------------------- Zones Plots ---------------------------------------- #
 
+print(" ")
 # Vitesse max et min en y 
 print( f" max(vy) = {max(abs(data[:,2]))}" )
 print( f" min(vy) = {min(abs(data[:,2]))}" )
 # Position max et min en x
 print( f" max(x) = {max((data[:,3])):.3e}" )
 print( f" min(x) = {min((data[:,3])):.3e}" )
+print(" ")
+# Erreur Emec
+if adaptative :
+    print( f" Emec err = {Eerr[0]} pour eps = {eps[0]} => jsteps = {jsteps_list[0]}" ) # On prend le premier epsilon (le plus précis si ordonné par odre croissant)
+else :
+    print( f" Emec err = {Eerr[-1]} pour nsteps = {nsteps[-1]}" ) # On prend le nombre de pas de temps max, donc (le plus précis si ordonné par ordre croissant)
+print(" ")    
 
 def Trajectoire () :
 
     plt.figure()
+    lbl = '$n_{step} = $' + f"{nsteps[-1]:.0f}"
+    if adaptative :
+        lbl = '$\\epsilon = $' + f"{eps[-1]:.0f}"
+        
+    
+    plt.plot(data[:, 3], data[:, 4], color = 'black' , label = lbl)
     Soleil  = plt.scatter(  - a * mj / (mj + ms) , 0 , marker = '*' , color = 'gold' , label = 'Soleil' )
 
     if jupyter : # On affiche Jupyter
@@ -162,20 +183,29 @@ def Trajectoire () :
         Jupyter = plt.scatter( a * ms / ( ms + mj ) ,0,marker = 'o' , color = 'brown' , label = "Jupyter" )
         
     else : # On affiche la position minimale et maximale en x 
-    
-        xmax = plt.scatter( max(data[:,3]),-1.51e12, marker = '+' , color = 'red' , label = "$x_{max} =$" + f"{max((data[:,3])):.2e}" )
-        xmin = plt.scatter( min(data[:,3]),0, marker = '^' , color = 'red' , label = "$x_{min} =$" + f"{min((data[:,3])):.2e}" )
+
+        print("")
+        #xmax = plt.scatter( max(data[:,3]),-1.51e12, marker = 's' , color = 'red' , label = "$x_{max} =$" + f"{max((data[:,3])):.2e}" )
+        #xmin = plt.scatter( min(data[:,3]),0, marker = '^' , color = 'red' , label = "$x_{min} =$" + f"{min((data[:,3])):.2e}" )
         
-    #posinit = plt.scatter(data[0,3],data[0,4], marker = 'o' , color = 'grey' , label = "astéroide")
-    plt.plot(data[:, 3], data[:, 4], color = 'black' , label = '$n_{step} = $' + f"{nsteps[-1]:.0f}")
+    #posinit = plt.scatter(data[0,3],data[0,4], marker = 'o' , color = 'grey' , label = "astéroide")  
+    
+
+    #for i in range(len(convergence_list)) : 
+        #plt.scatter(convergence_list, conv_list_y , marker = '+' , label = f"eps = {eps[i]:.1e}")
+    
     plt.xlabel('x [m]', fontsize=fs)
     plt.ylabel('y [m]', fontsize=fs)
     plt.legend()
 
-def Energie () : # Energie en fonction du temps 
+def Energie () : # Energie en fonction du temps
+
+    lbl = '$n_{step} = $' + f"{nsteps[-1]:.0f}"
+    if adaptative :
+        lbl = '$\\epsilon = $' + f"{eps[-1]:.0f}"
 
     plt.figure()
-    plt.plot(data[:, 0], data[:, 5], color = 'black' , label = '$n_{step} = $' + f"{nsteps[-1]:.0f}")
+    plt.plot(data[:, 0], data[:, 5], color = 'black' , label = lbl)
     plt.xlabel('t [s]', fontsize=fs)
     plt.ylabel('$E_{mec}$', fontsize=fs)
     plt.legend()
@@ -202,29 +232,39 @@ def Emec_Err ( norder = 5 ) : # Erreur de l'Emec en fonction du temps ( fixe et
         plt.legend(fontsize = fs - 3)
         plt.plot()
 
+def Jsteps_graph() :
+
+    plt.figure()
+    plt.plot( eps , jsteps_list , 'k+-' )
+    plt.xlabel( '$\\epsilon$' , fontsize = fs )
+    plt.ylabel( '$j_{steps}$' , fontsize = fs )
+
+def PosFin_Plot () :
+
+    plt.figure()
+    plt.plot(convergence_list,conv_list_y, 'k+-')
+    plt.ylabel('$y_{final}$', fontsize=fs)
+    plt.xlabel('$x_{final}$', fontsize=fs)
+
 def PosFin_Conv ( norder = 4 ) : # convergeance sur la postion finale ( en x )
 
-
     if adaptative : # convergeance en fonction de jsteps ( Runge Kutta adaptatif : ordre 1 ? )
-        
+
         plt.figure()
-        plt.plot(jsteps_list**norder, convergence_list , 'k+-' , linewidth = lw)
-        plt.xlabel(f"$(jsteps)^{norder}$", fontsize=fs)
+        plt.plot( pow(jsteps_list,norder), convergence_list , 'k+-' , linewidth = lw) # jsteps_list**norder)
+        plt.xlabel('$(j_{steps})$'+f"$^{norder}$", fontsize=fs)
         plt.ylabel('$x_{final}$', fontsize=fs)
-        plt.plot()
 
     else : # convergeance en fonction de dt ( Runge Kutta fixe : ordre 4)
 
         plt.figure()
-        plt.plot(dt**norder, convergence_list, 'k+-', linewidth=lw)
+        plt.plot(pow(dt,norder), convergence_list, 'k+-', linewidth=lw)
         plt.xlabel(f"$(\\Delta t)^{norder}$ [s]", fontsize=fs)
         plt.ylabel('$x_{final}$', fontsize=fs)
         plt.xticks(fontsize=fs)
         plt.yticks(fontsize=fs)
-        plt.grid(True)
-        plt.plot()
 
-def dts ( jstep ) : # Pas de temps au cours du temps et jsteps au cours du temps si adaptatif et jstep
+def dts ( jstep ) : # Pas de temps au cours du temps et jsteps au cours du temps si adaptatif et jstep = True
 
     plt.figure()
     plt.plot( t, data[:,-1] , color = 'black' , label = '$\\epsilon = $' + f'{eps[-1]}') # à modifier 
@@ -240,7 +280,6 @@ def dts ( jstep ) : # Pas de temps au cours du temps et jsteps au cours du temps
         plt.ylabel('$j_{steps}$', fontsize=fs)    
         plt.legend()
     
-
 def x() :
 
     fig, ax = plt.subplots(constrained_layout=True)
@@ -257,11 +296,12 @@ def vy () :
     ax.set_ylabel('vy [ms$^{-1}$]', fontsize=fs)
     plt.legend()
 
-
 Trajectoire ()
 Energie ()
-PosFin_Conv ()
-dts (True) 
+#PosFin_Conv ()
+#PosFin_Plot ()
+#Jsteps_graph ()
+#dts (True) 
 #x()
 #vy()
 Emec_Err ()
