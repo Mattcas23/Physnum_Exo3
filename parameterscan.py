@@ -44,7 +44,7 @@ Rg = Values[22,-1]
 
 nsteps = np.array([ 60 ])*1e3
 
-eps = np.array( [1000 , 3000 ,  5000 , 10000 , 20000])
+eps = np.array( [1,1e5,1e6,1e7,5e7,1e8,5e8])#[1000 , 3000 ,  5000 , 10000 , 20000])
 
 nsimul = len(nsteps)  # Number of simulations to perform ( pour un nombre de pas changeant )
 
@@ -148,6 +148,28 @@ print( f" min(vy) = {min(abs(data[:,2]))}" )
 print( f" max(x) = {max((data[:,3])):.3e}" )
 print( f" min(x) = {min((data[:,3])):.3e}" )
 
+def Trajectoires_Multiples():
+    plt.figure(figsize=(8,8))
+
+    # Boucle sur toutes les simulations avec différentes valeurs de eps
+    for i in range(nsimul2):
+        data = np.loadtxt(outputs[i])  # Charger les données
+        plt.plot(data[:, 3], data[:, 4], label=f"eps = {eps[i]:.1e}")
+
+    # Soleil
+    x_s = - a * mj / (mj + ms)
+    plt.scatter(x_s, 0, marker='o', s=50, color='gold', label="Soleil", zorder=3)
+
+    # Réglages du graphique
+    plt.xlabel('x [m]', fontsize=14)
+    plt.ylabel('y [m]', fontsize=14)
+    plt.title("Trajectoires pour différentes valeurs de eps", fontsize=16)
+    plt.axis('equal')
+    plt.legend()
+    plt.show()
+
+
+
 def Trajectoire () :
  
 
@@ -165,10 +187,11 @@ def Trajectoire () :
     # Coordonnées correspondantes
     x_max, y_max = data[idx_max, 3], data[idx_max, 4]
     x_min, y_min = data[idx_min, 3], data[idx_min, 4]
+    v_min, v_max = np.sqrt(data[idx_max, 1]**2+ data[idx_max, 2]**2) , np.sqrt(data[idx_min, 1]**2+ data[idx_min, 2]**2)
 
     # Affichage des résultats
-    print(f"Aphélie: r_max = {r_max:.2e} m, coordonnées (x, y) = ({x_max:.2e}, {y_max:.2e})")
-    print(f"Périhélie: r_min = {r_min:.2e} m, coordonnées (x, y) = ({x_min:.2e}, {y_min:.2e})")
+    print(f"Aphélie: r_max = {r_max:.2e} m, coordonnées (x, y) = ({x_max:.2e}, {y_max:.2e}), vitesse min = {v_min:.2e}")
+    print(f"Périhélie: r_min = {r_min:.2e} m, coordonnées (x, y) = ({x_min:.2e}, {y_min:.2e}), vitesse max = {v_max:.2e}")
 
     plt.figure()
     Soleil  = plt.scatter(  - a * mj / (mj + ms) , 0 , marker = 'o' , s=10,  color = 'gold' , label = 'Soleil', zorder=3 )
@@ -183,15 +206,14 @@ def Trajectoire () :
 
     else : # On affiche la position minimale et maximale en x # -1.51e12 pk?
 
-     rmax = plt.scatter( data[idx_max, 3], data[idx_max, 4], marker = '^' , s=10, color = 'red' , label = "$x_{max} =$" + f"{max((data[:,3])):.2e}" , zorder=3 )
-     rmin = plt.scatter( data[idx_min, 3], data[idx_min, 4], marker = 'o' , s=10, color = 'red', label = "$x_{min} =$" + f"{min((data[:,3])):.2e}" , zorder=3)
+     rmax = plt.scatter( data[idx_max, 3], data[idx_max, 4], marker = '^' , s=10, color = 'red' , label = f"Aphélie: r_max = {r_max:.2e} m" , zorder=3 )
+     rmin = plt.scatter( data[idx_min, 3], data[idx_min, 4], marker = 'o' , s=10, color = 'red', label = f"Périhélie: r_min = {r_min:.2e} m" , zorder=3)
      plt.plot([x_min, x_max], [y_min, y_max], 'c-', label="Axe Aphélie-Périhélie")
     #posinit = plt.scatter(data[0,3],data[0,4], marker = 'o' , color = 'grey' , label = "astéroide")
     plt.plot(data[:, 3], data[:, 4], color = 'black' ,  label = '$n_{step} = $' + f"{nsteps[-1]:.0f}")
     plt.xlabel('x [m]', fontsize=fs)
     plt.ylabel('y [m]', fontsize=fs)
     plt.axis('equal')
-    plt.grid()
     plt.legend()
 
 def Energie () : # Energie en fonction du temps 
@@ -279,8 +301,8 @@ def vy () :
  ax.set_ylabel('vy [ms$^{-1}$]', fontsize=fs)
  plt.legend()
 
-
-Trajectoire ()
+Trajectoires_Multiples()
+#Trajectoire ()
 #Energie ()
 #PosFin_Conv ()
 #dts (True) 
