@@ -88,6 +88,9 @@ bool Rg ; //
 	  dist_a_j = sqrt( ( y[2] - xj ) * ( y[2] - xj )  +  y[3]*y[3] ); // distance asteroide jupyter
       dist_a_s = sqrt( ( y[2] - xs ) * ( y[2] - xs )  +  y[3]*y[3] ); // distance asteroide soleil 
       
+      //cout << mj << endl ; 
+      //cout << Om << endl ; 
+      
       valarray<double> f = y ; 
       
       f[0]      =  G_grav * ms * (xs - y[2]) / pow(dist_a_s,3) + G_grav * mj  * (xj - y[2]) / pow(dist_a_j,3) + 2*Om*y[1] + pow(Om,2)*y[2] ; 
@@ -105,17 +108,17 @@ bool Rg ; //
 
 
 
-	std::valarray<double> RK4_do_onestep(const std::valarray<double>& yold, double ti, double dt) 
+	std::valarray<double> RK4_do_onestep(const std::valarray<double>& yold, double ti, double dti) 
 	{
 		std::valarray<double> k1, k2, k3, k4, ynew;
 		
-		k1 = dt * compute_f(yold) ; // compute_f(yold , ti) ; 
-		k2 = dt * compute_f(yold + k1/2.) ; // compute_f(yold + k1/2 , ti12) ; 
-		k3 = dt * compute_f(yold + k2/2.) ; // compute_f(yold + k2/2 , ti12) ; 
-		k4 = dt * compute_f(yold + k3) ; // compute_f(yold + k3, ti1) ; 
+		k1 = dti * compute_f(yold) ; 
+		k2 = dti * compute_f(yold + k1/2.) ; 
+		k3 = dti * compute_f(yold + k2/2.) ; 
+		k4 = dti * compute_f(yold + k3) ; 
 		
-		ynew = yold + ( k1 + 2.*k2 + 2.*k3 + k4 )/6.;
-		return ynew;
+		ynew = yold + ( k1 + 2.*k2 + 2.*k3 + k4 )/6. ;
+		return ynew ;
     }
 
 public:
@@ -134,7 +137,7 @@ public:
       G_grav   = configFile.get<double>("G_grav",G_grav);           
       mj       = configFile.get<double>("mj",mj);            
       ms       = configFile.get<double>("ms",ms);        
-      a     = configFile.get<double>("a",a);        
+      a        = configFile.get<double>("a",a);        
       sampling = configFile.get<unsigned int>("sampling",sampling);
       eps      = configFile.get<double>("eps", eps);
       maxit    = configFile.get<unsigned int>("maxit", maxit);
@@ -162,6 +165,7 @@ public:
     void run()
     {
       /** TODO : Ajouter une def de eps , f = 0.999 , jsteps , n (ordre de convergence n = 4) , ajouter une condition dans le config pour avec pas de temps adaptatif et sans **/ 
+      
       if ( jupyter )
       {
 		xs = - a * mj / (mj + ms) ; // position du soleil 
@@ -169,8 +173,12 @@ public:
 		Om = sqrt( G_grav * ( ms + mj ) / pow(a,3) ) ;
 		y0[2] = 2.*a + xs ; // position initiale en x
 		y0[1] = y0[1] - y0[2]*Om; // vitesse initiale selon y 
-		// y0[0] = y0[0] * sin(Om * t); // vitesse initiale selon x
 		cout << "Jupyter" << endl ; 
+		
+		if (Rg)
+        { cout << "Référentiel RG" << endl ; }
+		else 
+		{ cout << "Référentiel R'" << endl ; }
       }
       else 
 	  {
@@ -183,7 +191,7 @@ public:
 		 cout << " et mj = " << mj << endl ; 
 	  }
       
-      jsteps = 0 ; 
+      jsteps = 0 ; // initialise le nombre de pas pour le schéma adaptatif 
       
       t = 0.e0; // initialiser le temps
       y = y0;   // initialiser le position 
@@ -193,67 +201,58 @@ public:
       
       if ( adaptative == true ) // Si adaptative on fait avec la méthode de pas de temps adaptatif sinon sans (voir else)
 	  {	
-		  
+		cout << "ADAPTATIF" << endl ; 
+		cout << "eps : " << eps << endl ; 
 /****************************************************** Partie Avec Temps Adaptatif	**************************************************/ 
 
-		n = 4 ;  // Ordre de convergeance de Runge Kutta
+		n = 5 ;  // Ordre de convergeance de Runge Kutta ordre 4 ( 5 d'après nos simulations )
 
 		valarray<double> y1 ; 
 		valarray<double> ytilde ; 
 		valarray<double> y2 ; 
 		double d ; 
 	  
-		cout << "ADAPTATIF" << endl ; 
-		cout << "eps : " << eps << endl ; 
-		
-		while ( t < tfin ) 
+		while ( t < tfin ) // on continue jusqu'à avoir atteint le temps final 
 		{	
-			dt = min( dt , abs(tfin-t) ) ; 
-			jsteps += 1 ; 
+			dt = min( dt , abs(tfin-t) ) ; // on sélectionne le dernier pas de temps de sorte à ce que t + dt = tfin 
+			++ jsteps ; // on ajoute une itération par cycle 
 		  
-			y1 = RK4_do_onestep(y,t,dt) ; 
-			ytilde = RK4_do_onestep(y,t,dt/2.) ; 
-			y2 = RK4_do_onestep(ytilde,t,dt/2.) ; 
+			y1 = RK4_do_onestep(y,t,dt) ; // on fait un pas en entier
+			/** On fait deux demi-pas **/ 
+			ytilde = RK4_do_onestep(y,t,dt/2.) ; /** premier demi-pas **/
+			y2 = RK4_do_onestep(ytilde,t,dt/2.) ; /** deuxième demi-pas **/
 		  
-			d = (abs(y2-y1)).max() ; //sqrt(pow((y2-y1),2).sum()) ; 
+			d = (abs(y2-y1)).max() ; // on calcule l'erreur entre les deux chemin (rouge et bleu)
 		  
-			if ( d <= eps ) 
+			if ( d <= eps ) // si la distance est inférieure à epsilon, on accepte le pas 
 			{
-				if (d == 0)
-				{
-					y = y2 ; 
-					t+=dt ; 
-					// cerr << " d = 0 " << endl ; 
-				}
-				else
-				{
-					y = y2 ; 
-					t += dt ; 
-					dt = dt * pow( eps/d , 1/(n+1) ) ; 
-					//cout << "d_if : " << d << endl ; 
-				}
-			}
-			else 
-			{
-				while( d > eps )
-				{
-					dt = f * dt * pow( eps/d , 1/(n+1) ) ; 
-					
-					y1 = RK4_do_onestep(y,t,dt) ; 
-					ytilde = RK4_do_onestep(y,t,dt/2.) ; 
-					y2 = RK4_do_onestep(ytilde,t,dt/2.) ;
-					
-					d = (abs(y2-y1)).max() ; // sqrt(pow((y2-y1),2).sum()) ; 
-					//cout << "d_else :  " << d << endl ; 
-				}
+				y = y2 ; // on pose la nouvelle position équivalente aux deux demi-pas de temps successifs 
+				t+= dt ; // on augmente le temps du pas effectué
 				
-				y = y2 ; 
-				t += dt ; 
+				if (d == 0) // évite les divisions pas 0 
+				{ dt = 5.*dt ; } // on allonge le pas de temps d'un facteur 2
+				else
+				{ dt = dt * pow( eps/d , 1/(n+1) ) ; } // sinon on allonge le pas de temps normalement 
 			}
-			// cout << "dt : " << dt << endl ; 
-			printOut(false);
+			else // si d > epsilon
+			{
+				while( d > eps ) // tant que d > epsilon on réduit le pas de temps et on recommence
+				{		
+					dt = f * dt * pow( eps/d , 1/(n+1) ) ; // on réduit le pas de temps, f = 0.999 permet d'éviter les boucles infinies 
+					
+					y1 = RK4_do_onestep(y,t,dt) ; // on fait un pas en entier
+					/** On fait deux demi-pas **/ 
+					ytilde = RK4_do_onestep(y,t,dt/2.) ; /** premier demi-pas **/
+					y2 = RK4_do_onestep(ytilde,t,dt/2.) ; /** deuxième demi-pas **/
+					
+					d = (abs(y2-y1)).max() ; // on calcule l'erreur entre les deux chemin (rouge et bleu)
+				}
+				y = y2 ; // on pose la nouvelle position équivalente aux deux demi-pas de temps successifs 
+				t += dt ; // on augmente le temps 
+			}
+			printOut(false); // on écrit le résultat dans le fichier 
 		}
-		printOut(true);	
+		printOut(true);	// on écrit le dernier pas de temps 
       }
       
 /**************************************************** Partie Sans dt Adaptatif *******************************************/      
